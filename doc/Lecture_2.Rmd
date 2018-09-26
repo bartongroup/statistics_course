@@ -1,0 +1,234 @@
+---
+title: "Lecture 2"
+output:
+  html_document:
+    css: tabbed_notebook.css
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = "../cache/lecture2/",
+  fig.path = "../cache/lecture2/"
+)
+fig <- "../fig/L2/"
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+```{r pipetting_data}
+pip <- c(39, 21, 23, 30, 28)
+pip.df <- data.frame(
+  plate=seq_along(pip),
+  obs = pip,
+  lo = pip - sqrt(pip),
+  up = pip + sqrt(pip),
+  exp=mean(pip)
+)
+```
+
+```{r pipetting_uniform, fig.width=4, fig.height=3}
+plotPip <- function(x) {
+  df <- data.frame(x=seq_along(x), y=x)
+  ggplot(df, aes(x, y)) +
+    theme_dist +
+    geom_col(fill=fill.colour, colour="black", width=0.8) +
+    labs(x="Plate", y="Colony count") +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y * 1.05)))
+}
+
+g1 <- plotPip(c(38, 32, 41, 35, 37))
+g2 <- plotPip(c(12, 41, 64, 28, 19))
+g1
+g2
+
+ggsave(paste0(fig, "pipetting_uniform.png"), plot=g1, device="png", width=3.5, height=2.5, dpi=300) 
+ggsave(paste0(fig, "pipetting_nonuniform.png"), plot=g2, device="png", width=3.5, height=2.5, dpi=300) 
+```
+
+```{r pipetting_plot, fig.width=3, fig.height=2.5}
+g <- ggplot(pip.df, aes(x=plate, y=pip)) +
+  theme_classic() +
+  geom_hline(yintercept = mean(pip), colour="red") +
+  geom_errorbar(aes(ymin = lo, ymax = up), width=0.2) +
+  geom_point(shape=21, size=3, fill="white") +
+  labs(x="Plate", y="Count")
+g
+
+ggsave(paste0(fig, "pipetting.png"), plot=g, device="png", width=4.5, height=3, dpi=300) 
+```
+
+```{r pipetting_numbers}
+pip.df$chi <- (pip.df$obs - pip.df$exp) / sqrt(pip.df$exp)
+myKable(t(pip.df), digits=2, row.names=TRUE)
+chi2 <- sum(pip.df$chi^2)
+chisq.test(t(pip.df$obs))
+```
+
+```{r generate_pipetting_function}
+nunif <- function(nbin, ntot) {
+  n <- floor(runif(ntot, min=1, max=nbin+1-1e-16))
+  sim <- as.integer(table(n))
+}
+
+generatePipetting <- function(nbin, ntot, nrow) {
+  ex <- rep(ntot/nbin, nbin)
+  P <- lapply(1:nrow, function(i) {
+    r <- nunif(nbin, ntot)
+    (r - ex) / sqrt(ex)
+  })
+  df <- do.call(rbind, P)
+} 
+```
+
+```{r generate_pippeting}
+nbin <- length(pip)
+ntot <- sum(pip)
+nsim <- 100000
+nbatch <- 10
+P <- mclapply(1:nbatch, function(i) {
+  generatePipetting(nbin, ntot, nsim)
+}, mc.cores=4)
+simpip <- do.call(rbind, P) 
+```
+
+```{r sim_pippeting, fig.width=4, fig.height=3}
+m <- reshape2::melt(simpip, varnames=c("sim", "bin"))
+x <- seq(-4, 4, 0.05)
+pexp <- data.frame(
+  x=x,
+  y=dnorm(x)
+)
+
+brks <- unique(sort(m$value))
+brks <- brks + 0.5 * (brks[2] - brks[1])
+g <- ggplot(m, aes(x=value, y=..density..)) +
+  theme_dist +
+  geom_histogram(breaks=brks, fill=fill.colour.mid) +
+  facet_grid(. ~ bin) +
+  geom_line(data=pexp, aes(x, y), colour="blue") +
+  labs(x=expression(chi), y="Density") +
+  theme(strip.background = element_blank(), strip.text = element_blank()) +
+  scale_x_continuous(limits=c(-3, 3))
+g
+
+ggsave(paste0(fig, "pipetting_sim.png"), plot=g, device="png", width=5, height=2, dpi=300)
+```
+
+```{r pipetting_chisquare, fig.width=4, fig.height=3}
+chi2 <- apply(simpip, 1, function(v) {
+  sum(v^2)
+})
+df <- data.frame(x=chi2)
+x <- seq(0, 30, 0.1)
+y <- dchisq(x, ncol(simpip) - 1)
+dchi2 <- data.frame(x=x, y=y)
+
+brks <- seq(0, 20, 0.5)
+g <- ggplot(df, aes(x=x, y=..density..)) +
+  theme_dist +
+  geom_histogram(breaks=brks, fill=fill.colour.mid) +
+  geom_line(data=dchi2, aes(x, y), colour="blue") +
+  labs(x=expression(chi^2), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0))
+g
+
+ggsave(paste0(fig, "chi2_dist.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r chisquare_cut, fig.width=4, fig.height=3}
+chi2pip <- chisq.test(pip)$statistic
+x <- seq(chi2pip, 20, 0.1)
+df <- data.frame(
+  x = c(chi2pip, x, chi2pip),
+  y = c(0, dchisq(x, length(pip) - 1), 0)
+)
+
+g <- ggplot(df, aes(x=x, y=..density..)) +
+  theme_dist +
+  geom_line(data=dchi2, aes(x, y), colour="blue") +
+  labs(x=expression(chi^2), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_polygon(data=df, aes(x, y), colour="blue", fill=fill.colour.dark)
+g
+
+ggsave(paste0(fig, "chi2_dist_cut.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r geissler_data}
+geissler <- data.frame(
+  girls = 0:12,
+  boys = 12:0,
+  count = c(7, 45, 181, 478, 829, 1112, 1343, 1033, 670, 286, 104, 24, 3)
+)
+tot <- sum(geissler$count)
+n <- max(geissler$girls)
+p <- sum(geissler$girls * geissler$count) / (n * tot)
+geissler$binom <- dbinom(0:n, n, p) * tot
+geissler$chi <- (geissler$count - geissler$binom) / sqrt(geissler$binom)
+```
+
+
+```{r geissler_plot_function} 
+geisslerPlot <- function(geissler, with.binomial=FALSE) {
+  g <- ggplot()
+  n <- max(geissler$girls)
+  
+  if(with.binomial) {
+    g <- g + geom_col(data=geissler, aes(x=girls, y=binom), fill=fill.colour.mid, colour="black", width=0.8)
+  }
+  
+  g <- g +
+    theme_dist +
+    geom_segment(data=geissler, aes(x=girls, xend=girls, y=0, yend=count)) +
+    geom_point(data=geissler, aes(x=girls, y=count)) +
+    labs(x="Girls", y="Count") +
+    scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.5, 12.5)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(geissler$count) * 1.05), breaks=c(500,1000))
+  
+  if(with.binomial) {
+    g <- g + 
+      theme(axis.title.x = element_blank(), axis.text.x = element_blank(), plot.margin = margin(b=0))
+    g1 <- ggplot(geissler) +
+      theme_dist +
+      geom_segment(aes(x=girls, xend=girls, y=0, yend=chi)) +
+      geom_point(data=geissler, aes(x=girls, y=chi)) +
+      labs(x="Girls", y=expression(chi)) +
+      scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.5, 12.5)) +
+      scale_y_continuous(limits=c(-5,5)) +
+      theme(plot.margin = margin(t=0)) +
+      geom_hline(yintercept = 0, colour="grey60")
+    return(plot_grid(g, g1, ncol=1, align="v", rel_heights = c(3, 1)))
+  } else {
+    return(g)
+  }
+}
+```
+
+
+```{r geissler_plot, fig.width=4, fig.height=3}
+g1 <- geisslerPlot(geissler)
+g2 <- geisslerPlot(geissler, with.binomial = TRUE)
+g1
+g2
+ 
+ggsave(paste0(fig, "geissler.png"), plot=g1, device="png", width=4, height=3.5, dpi=300)
+ggsave(paste0(fig, "geissler_binom.png"), plot=g2, device="png", width=4, height=4, dpi=300)
+```
