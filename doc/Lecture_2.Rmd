@@ -47,7 +47,7 @@ plotPip <- function(x) {
   df <- data.frame(x=seq_along(x), y=x)
   ggplot(df, aes(x, y)) +
     theme_dist +
-    geom_col(fill=fill.colour, colour="black", width=0.8) +
+    geom_col(fill=fill.colour.mid, colour=bar.outline, width=0.8) +
     labs(x="Plate", y="Colony count") +
     scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y * 1.05)))
 }
@@ -124,7 +124,8 @@ g <- ggplot(m, aes(x=value, y=..density..)) +
   geom_line(data=pexp, aes(x, y), colour="blue") +
   labs(x=expression(chi), y="Density") +
   theme(strip.background = element_blank(), strip.text = element_blank()) +
-  scale_x_continuous(limits=c(-3, 3))
+  scale_x_continuous(limits=c(-3, 3)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 0.46))
 g
 
 ggsave(paste0(fig, "pipetting_sim.png"), plot=g, device="png", width=5, height=2, dpi=300)
@@ -191,29 +192,39 @@ geisslerPlot <- function(geissler, with.binomial=FALSE) {
   g <- ggplot()
   n <- max(geissler$girls)
   
+  # binomial has to go at the bottom
   if(with.binomial) {
-    g <- g + geom_col(data=geissler, aes(x=girls, y=binom), fill=fill.colour.mid, colour="black", width=0.8)
+    g <- g + geom_col(data=geissler, aes(x=girls, y=binom), fill=fill.colour.mid, colour=bar.outline, width=0.8)
   }
   
+  # main plot
   g <- g +
     theme_dist +
-    geom_segment(data=geissler, aes(x=girls, xend=girls, y=0, yend=count)) +
+    theme(axis.text = element_text(size=12)) +
+    geom_segment(data=geissler, aes(x=girls, xend=girls, y=0, yend=count), colour=bar.outline) +
     geom_point(data=geissler, aes(x=girls, y=count)) +
     labs(x="Girls", y="Count") +
-    scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.5, 12.5)) +
+    scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.1, 12.1)) +
     scale_y_continuous(expand=c(0,0), limits=c(0, max(geissler$count) * 1.05), breaks=c(500,1000))
   
+  # residual plot
   if(with.binomial) {
     g <- g + 
-      theme(axis.title.x = element_blank(), axis.text.x = element_blank(), plot.margin = margin(b=0))
+      theme(
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.margin = margin(l=3, r=2, b=0)
+      )
     g1 <- ggplot(geissler) +
       theme_dist +
-      geom_segment(aes(x=girls, xend=girls, y=0, yend=chi)) +
+      theme(axis.text = element_text(size=12)) +
+      geom_segment(aes(x=girls, xend=girls, y=0, yend=chi), colour=bar.outline) +
       geom_point(data=geissler, aes(x=girls, y=chi)) +
       labs(x="Girls", y=expression(chi)) +
-      scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.5, 12.5)) +
-      scale_y_continuous(limits=c(-5,5)) +
-      theme(plot.margin = margin(t=0)) +
+      scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.1, 12.1)) +
+      scale_y_continuous(limits=c(-5,5), breaks=c(-5,0,5)) +
+      theme(plot.margin = margin(t=-1)) +
       geom_hline(yintercept = 0, colour="grey60")
     return(plot_grid(g, g1, ncol=1, align="v", rel_heights = c(3, 1)))
   } else {
@@ -227,8 +238,58 @@ geisslerPlot <- function(geissler, with.binomial=FALSE) {
 g1 <- geisslerPlot(geissler)
 g2 <- geisslerPlot(geissler, with.binomial = TRUE)
 g1
-g2
- 
+g2 
 ggsave(paste0(fig, "geissler.png"), plot=g1, device="png", width=4, height=3.5, dpi=300)
 ggsave(paste0(fig, "geissler_binom.png"), plot=g2, device="png", width=4, height=4, dpi=300)
 ```
+
+```{r binomial_example, fig.width=3, fig.height=2.5}
+df <- data.frame(
+  x = 0:8,
+  y = dbinom(0:8, size=8, prob=0.5)
+)
+
+g <- ggplot(df, aes(x, y)) +
+  theme_dist +
+  geom_col(fill=fill.colour.mid, colour=bar.outline, width=0.8) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y) * 1.05)) +
+  labs(x="Number of heads", y="Probability")
+g
+ 
+ggsave(paste0(fig, "binom_8.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r flow_cytometry_data}
+flow.cyt <- matrix(c(50, 61, 78, 43, 172, 175, 162, 178, 55, 45, 47, 59), ncol=4, byrow = TRUE)
+colnames(flow.cyt) <- c("WT", "KO1", "KO2", "KO3")
+rownames(flow.cyt) <- c("G1", "S", "G2")
+flow.prop <- t(t(flow.cyt) / colSums(flow.cyt))
+flow.err <- flow.prop * (1 - flow.prop)
+flow.err <- sqrt(t(t(flow.err) / colSums(flow.cyt)))
+
+mflow.prop <- reshape2::melt(flow.prop, varnames=c("cycle", "condition"), value.name="proportion")
+mflow.err <- reshape2::melt(flow.err, varnames=c("cycle", "condition"))
+mflow.prop$error <- mflow.err$value
+```
+
+```{r flow_cytometry_plot, fig.width=4, fig.height=3}
+txt <- data.frame(
+  condition = rep("WT", 3),
+  cycle = c("G1", "S", "G2"),
+  proportion = rep(0.03, 3)
+)
+txt$cycle <- factor(txt$cycle, levels=txt$cycle)
+
+g <- ggplot(mflow.prop, aes(x=condition, y=proportion, group=cycle)) +
+  geom_col(aes(fill=cycle), colour=bar.outline, position="dodge") +
+  geom_errorbar(aes(x=condition, ymin=proportion-error, ymax=proportion+error), width=0.2, position=position_dodge(0.9)) +
+  scale_fill_manual(values=cbPalette) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(flow.prop) * 1.05)) +
+  labs(x="Condition", y="Proportion", fill="Cell cycle") +
+  theme(legend.position = "none") +
+  geom_text(data=txt, aes(label=cycle), position=position_dodge(0.9), size=3.5)
+g
+
+ggsave(paste0(fig, "flow_cytometry.png"), plot=g, device="png", width=4, height=3, dpi=300)
+```
+

@@ -1,0 +1,88 @@
+---
+title: "Lecture 3"
+output:
+  html_document:
+    css: tabbed_notebook.css
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = "../cache/lecture3/",
+  fig.path = "../cache/lecture3/"
+)
+fig <- "../fig/L3/"
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r one_sample_function}
+plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA)) {
+  df <- data.frame(x = x)
+  maxx <- ifelse(with.point, 3, 2)
+  g <- ggplot(df, aes(x=1, y=x)) +
+    theme_dist +
+    geom_jitter(width=0.15, height=0) +
+    labs(y="Body mass (g)") +
+    scale_x_continuous(limits=c(0, maxx)) +
+    scale_y_continuous(expand=c(0, 0), limits=limits) +
+    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank()) +
+    geom_hline(yintercept = m, colour="blue", linetype="dotted")
+  if(with.point) {
+    M <- mean(x)
+    SE <- sd(x) / sqrt(length(x))
+    pf <- data.frame(x=2, y=M, lo=M-SE, up=M+SE)
+    g <- g + 
+      geom_point(data=pf, aes(x, y)) +
+      geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour="blue")
+  }
+  g
+}
+```
+
+
+```{r one_sided_ttest, fig.width=2, fig.height=3}
+set.seed(1876)
+g1 <- plotOneSample(rnorm(8, mean=25, sd=5), 20)
+g1
+```
+
+```{r generate_sample_function}
+generateZSample <- function(n, SE, M0, Z, eps=1e-3) {
+  S <- SE * sqrt(n)
+  M <- M0 + Z * SE
+  repeat {
+    x <- rnorm(n, mean=M, sd=S)
+    m <- mean(x)
+    se <- sd(x) / sqrt(length(x))
+    if(abs(abs(m - M0) - abs(Z * se)) < eps) break
+  }
+  x
+}
+```
+
+```{r plot_2SE_test, fig.width=2, fig.height=3}
+set.seed(31236)
+x <- generateZSample(12, 0.8, 20, 2)
+g1 <- plotOneSample(x, 20, with.point = TRUE, limits=c(0,40))
+g1
+
+set.seed(23)
+x <- generateZSample(12, 3, 20, -2)
+g2 <- plotOneSample(x, 20, with.point = TRUE, limits=c(0,40))
+g2
+```
