@@ -1,4 +1,5 @@
 library(ggplot2)
+library(gganimate)
 library(knitr)
 library(kableExtra)
 library(gridExtra)

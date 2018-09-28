@@ -31,7 +31,7 @@ pre code, pre, code {
 ```
 
 ```{r one_sample_function}
-plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA)) {
+plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA), point.colour="blue") {
   df <- data.frame(x = x)
   maxx <- ifelse(with.point, 3, 2)
   g <- ggplot(df, aes(x=1, y=x)) +
@@ -40,15 +40,15 @@ plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA)) {
     labs(y="Body mass (g)") +
     scale_x_continuous(limits=c(0, maxx)) +
     scale_y_continuous(expand=c(0, 0), limits=limits) +
-    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank(), panel.border = element_rect(colour="grey50", fill=NA)) +
     geom_hline(yintercept = m, colour="blue", linetype="dotted")
   if(with.point) {
     M <- mean(x)
     SE <- sd(x) / sqrt(length(x))
     pf <- data.frame(x=2, y=M, lo=M-SE, up=M+SE)
     g <- g + 
-      geom_point(data=pf, aes(x, y)) +
-      geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour="blue")
+      geom_point(data=pf, aes(x, y), colour=point.colour) +
+      geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour=point.colour)
   }
   g
 }
@@ -56,9 +56,10 @@ plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA)) {
 
 
 ```{r one_sided_ttest, fig.width=2, fig.height=3}
-set.seed(1876)
-g1 <- plotOneSample(rnorm(8, mean=25, sd=5), 20)
-g1
+set.seed(1878)
+g <- plotOneSample(rnorm(8, mean=25, sd=4), 20, limits=c(15,35))
+g
+ggsave(paste0(fig, "one-sided_t-test.png"), plot=g, device="png", width=2, height=3.5, dpi=300)
 ```
 
 ```{r generate_sample_function}
@@ -77,12 +78,48 @@ generateZSample <- function(n, SE, M0, Z, eps=1e-3) {
 
 ```{r plot_2SE_test, fig.width=2, fig.height=3}
 set.seed(31236)
-x <- generateZSample(12, 0.8, 20, 2)
-g1 <- plotOneSample(x, 20, with.point = TRUE, limits=c(0,40))
+x1 <- generateZSample(12, 0.8, 20, 2)
+g1 <- plotOneSample(x1, 20, with.point = TRUE, limits=c(0,40))
 g1
-
+ggsave(paste0(fig, "two_SE_1.png"), plot=g1, device="png", width=1.8, height=3, dpi=300)
+ 
 set.seed(23)
-x <- generateZSample(12, 3, 20, -2)
-g2 <- plotOneSample(x, 20, with.point = TRUE, limits=c(0,40))
+x2 <- generateZSample(12, 3, 20, -2)
+g2 <- plotOneSample(x2, 20, with.point = TRUE, limits=c(0,40))
 g2
+ggsave(paste0(fig, "two_SE_2.png"), plot=g2, device="png", width=1.8, height=3, dpi=300)
+```
+
+
+```{r animated_t-dist_data}
+x <- seq(-5, 5, 0.1)
+P <- lapply(1:30, function(df) {
+  y <- dt(x, df)
+  data.frame(
+    dof = df,
+    x = x,
+    y = y
+  )
+})
+tf <- do.call(rbind, P)
+ef <- data.frame(
+  x = x,
+  y = dnorm(x)
+)
+tf1 <- setNames(tf, c("dummy", "x", "y"))
+```
+
+```{r animated_t-dist, fig.width=3, fig.height=2.5}
+g <- ggplot(tf, aes(x=x, y=y)) +
+  geom_line(data=tf1, aes(x=x, y=y, group=dummy), colour="grey80", size=0.5) +
+  geom_line(colour="red", size=2) +
+  geom_line(data=ef, aes(x, y), colour="black", size=1) +
+  theme(axis.text = element_text(size=24), text = element_text(size=24), plot.title = element_text(size=26)) +
+  transition_manual(dof) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(tf$y) * 1.03)) +
+  scale_x_continuous(breaks=seq(-4,4,2), limits=c(-5,5), expand=c(0,0)) +
+  labs(title="d.o.f. = {current_frame}", x="t", y="f(t)")
+animate(g, fps = 20, renderer = gifski_renderer(loop = FALSE), width=600, height=500)
+
+anim_save(paste0(fig, "t-dist_anim.gif"))
 ```
