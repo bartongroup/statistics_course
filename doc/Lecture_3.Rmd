@@ -123,3 +123,47 @@ animate(g, fps = 20, renderer = gifski_renderer(loop = FALSE), width=600, height
 
 anim_save(paste0(fig, "t-dist_anim.gif"))
 ```
+
+```{r deviation_mean_null}
+set.seed(4826)
+M <- 20
+S <- 5
+N <- 5
+sN <- sqrt(N)
+X <- matrix(rnorm(N * 1000000, M, S), ncol=N)
+mf <- data.frame(
+  m = apply(X, 1, mean),
+  z = apply(X, 1, function(x) (mean(x) - M) / (S / sN)),
+  t = apply(X, 1, function(x) (mean(x) - M) / (sd(x) / sN))
+)
+```
+
+```{r deviation_mean_null_plot}
+plotOneDist <- function(d, name, title, limits, fun, ..., bins=100, f.bins=100) {
+  x <- seq(limits[1], limits[2], length.out = f.bins)
+  y <- fun(x, ...)
+  brks <- seq(limits[1], limits[2], length.out = bins)
+  ggplot(data.frame(d=d), aes(x=d, y=..density..)) +
+    geom_histogram(breaks=brks, fill=fill.colour.mid) +
+    #geom_outline(d, brks, colour="grey50") +
+    geom_line(data=data.frame(x=x, y=y), aes(x, y), size=0.5) +
+    labs(x=name, y="Density", title=title) +
+    scale_x_continuous(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(y) * 1.03))
+}
+
+g1 <- plotOneDist(as.vector(X), "Body mass (g)", "Original distribution",c(0, 40), dnorm, mean=M, sd=S)
+g2 <- plotOneDist(mf$z, "Z", "Distribution of Z", c(-5, 5), dnorm, mean=0, sd=1)
+g3 <- plotOneDist(mf$m, "Sample mean (g)", "Distribution of M", c(0, 40), dnorm, mean=M, sd=S/sqrt(N))
+
+x <- seq(-5, 5, length.out = 100)
+gt <- data.frame(x=x, y=dt(x, N-1))
+g4 <- plotOneDist(mf$t, "t", "Distribution of t", c(-5, 5), dnorm, mean=0, sd=1) +
+  geom_line(data=gt, aes(x, y), size=0.5, colour="blue") 
+
+g <- plot_grid(g1, g2, g3, g4, ncol=2)
+g
+
+ggsave(paste0(fig, "deviation_mean_null.png"), plot=g, device="png", width=8, height=6, dpi=300)
+```
+

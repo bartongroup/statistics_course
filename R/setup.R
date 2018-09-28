@@ -27,3 +27,12 @@ british.palette <- c(
 myKable <- function(df, row.names=FALSE, col.names=NA, digits=2, bootstrap="condensed") {
   kable(df, format="html", row.names=row.names, col.names=col.names, digits=digits) %>% kable_styling(bootstrap_options=bootstrap, full_width=FALSE, position="left", font_size=12)
 }
+
+geom_outline <- function(d, breaks, ...) {
+  bins <- breaks[2] - breaks[1]
+  st <- data.frame(
+    x = breaks[-1] - bins,
+    y = as.numeric(table(cut(d, breaks))) / (bins * length(d))
+  )
+  geom_step(data=st, aes(x, y), ...)
+}

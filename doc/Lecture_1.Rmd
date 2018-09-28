@@ -70,16 +70,6 @@ mouse <- lapply(1:1000000, function(i) {
 mouse <- unlist(mouse)
 ```
 
-```{r histogram_outline_function}
-geom_outline <- function(d, breaks, ...) {
-  bins <- breaks[2] - breaks[1]
-  st <- data.frame(
-    x = breaks[-1] - bins,
-    y = as.numeric(table(cut(d, breaks))) / (bins * length(d))
-  )
-  geom_step(data=st, aes(x, y), ...)
-}
-```
 
 
 ```{r fig_mouse_null, fig.width=4, fig.height=3}
