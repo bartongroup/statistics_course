@@ -86,18 +86,27 @@ g
 ggsave(paste0(fig, "variance.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
 ```
 
+```{r get_means_function}
+getMeans <- function(mice, value="Mass") {
+  width <- 0.6
+  M <- tapply(mice[, value], mice$Country, mean)
+  L <- tapply(mice$Country, mice$Country, length)
+  mice$grand.mean <- mean(mice[, value])
+  mice$Mean <- M[mice$Country]
+  mice$N <- L[mice$Country]
+  mice$group <- as.integer(mice$Country)
+  mice$n <- unlist(tapply(mice$Country, mice$Country, seq_along))
+  mice$x <- as.integer(mice$Country) + width*(mice$n - mice$N/2 - 1/2) / (mice$N - 1)
+  means <- data.frame(x=as.numeric(seq_along(M)), mean=M, country=names(M))
+  list(mice=mice, means=means)  
+}
+```
+
 
 ```{r prepare_mice}
-width <- 0.6
-M <- tapply(mice1$Mass, mice1$Country, mean)
-L <- tapply(mice1$Country, mice1$Country, length)
-mice1$grand.mean <- mean(mice1$Mass)
-mice1$Mean <- M[mice1$Country]
-mice1$N <- L[mice1$Country]
-mice1$group <- as.integer(mice1$Country)
-mice1$n <- unlist(tapply(mice1$Country, mice1$Country, seq_along))
-mice1$x <- as.integer(mice1$Country) + width*(mice1$n - mice1$N/2 - 1/2) / (mice1$N - 1)
-means <- data.frame(x=as.numeric(seq_along(M)), mean=M, country=names(M))
+m <- getMeans(mice1)
+mice1 <- m$mice
+means <- m$means
 ```
 
 ```{r plot_variance_function}

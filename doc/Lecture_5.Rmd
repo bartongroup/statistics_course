@@ -520,6 +520,168 @@ ggsave(paste0(fig, "W_dist_norm_cut.png"), plot=P$g3, device="png", width=3, hei
 
 
 ```{r read_4mice}
+set.seed(999)
+countries <- c("English", "Scottish", "Welsh", "N.Irish")
 lifespan4 <- read.table("../data/mice_kruskal.txt", sep="\t", header=TRUE)
-lifespan4$Rank <- rank(lifespan4$Lifespan)
+lifespan4$Rank <- rank(lifespan4$Lifespan, ties.method="average")
+lifespan4$Country <- factor(lifespan4$Country, levels=countries)
+```
+
+
+```{r plot_mice_box_function}
+plotMiceBox <- function(mice, what="Lifespan", ylab="Lifespan (day)", seed=111, limits=NULL) {
+  set.seed(seed)
+  g <- ggplot(mice, aes_string(x="Country", y=what)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    geom_boxplot(aes(fill=Country), alpha=0.5, outlier.shape = NA) +
+    scale_fill_manual(values=british.palette) +
+    geom_jitter(width=0.15, height=0) +
+    labs(x="", y=ylab)
+  if(!is.null(limits)) g <- g + ylim(limits)
+  g
+}
+
+rankPlot <- function(mice) {
+  mice <- mice %>% group_by(Rank) %>% mutate(idx = row_number(Rank)) %>% as.data.frame
+  labsi <- c(1, seq(5,40,5))
+  labs <- rep("", 40)
+  labs[labsi] <- labsi
+  ggplot(mice, aes(x=Rank, y=idx, fill=Country, shape=Country)) +
+    theme_classic() +
+    geom_point(size=3) +
+    theme(
+      axis.line.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+    ) +
+    scale_fill_manual(values=british.palette) +
+    scale_x_continuous(breaks=1:40, labels=labs) +
+    scale_shape_manual(values=21:24) +
+    labs(x = "Rank", y="")
+}
+```
+
+```{r anova_rank_plot, fig.width=5, fig.height=3}
+g1 <- plotMiceBox(lifespan4)
+g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank")
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+ggsave(paste0(fig, "anova_kruskal.png"), plot=g, device="png", width=5, height=3, dpi=300)
+```
+
+```{r rank_plot_4mice, fig.width=3, fig.height=0.3}
+ls2 <- lifespan
+ls2$Country <- ls2$Condition
+ls2$Country <- gsub("WT", "English", ls2$Country)
+ls2$Country <- gsub("KO", "Scottish", ls2$Country)
+ls2$Rank <- rank(ls2$Lifespan, ties.method="random")
+g2.1 <- plotMiceBox(ls2)
+g2.2 <- plotMiceBox(ls2, what="Rank", ylab="Rank")
+g0 <- plot_grid(g2.1, g2.2, ncol=2)
+
+g1 <- rankPlot(ls2) 
+g2 <- rankPlot(lifespan4) + scale_y_continuous(expand=c(0,0.6))
+  
+ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3, height=3, dpi=300)
+
+ggsave(paste0(fig, "mice2_rank.png"), plot=g1, device="png", width=3, height=0.7, dpi=300)
+ggsave(paste0(fig, "mice4_rank.png"), plot=g2, device="png", width=5, height=0.95, dpi=300)
+```
+
+```{r get_means_function}
+getMeans <- function(mice, value="Mass", width=0.6) {
+  M <- tapply(mice[, value], mice$Country, mean)
+  L <- tapply(mice$Country, mice$Country, length)
+  mice$grand.mean <- mean(mice[, value])
+  mice$Mean <- M[mice$Country]
+  mice$N <- L[mice$Country]
+  mice$group <- as.integer(mice$Country)
+  mice$n <- unlist(tapply(mice$Country, mice$Country, seq_along))
+  mice$x <- as.integer(mice$Country) + width*(mice$n - mice$N/2 - 1/2) / (mice$N - 1)
+  means <- data.frame(x=as.numeric(seq_along(M)), mean=M, country=names(M))
+  list(mice=mice, means=means)  
+}
+```
+
+
+```{r plot_variance_function}
+plotVariance <- function(mice, means, within=TRUE, width=0.6) {
+  gm <- mice$grand.mean[1]
+  g <- ggplot(mice) + theme_classic()
+  if(within) {
+    g <- g + geom_segment(aes(x=x, xend=x, y=Mean, yend=Rank), colour="grey70")
+  } else {
+    g <- g +
+      geom_line(data=data.frame(x=c(1-width/2,4+width/2), y=c(gm, gm)), aes(x,y), linetype="dotted") +
+      geom_segment(aes(x=x, xend=x, y=grand.mean, yend=Mean), colour="grey70")
+  }
+  g <- g +
+    geom_segment(data=means, aes(x=x-width/2, xend=x+width/2, y=mean, yend=mean, colour=country)) +
+    geom_point(aes(x=x, y=Rank, colour=Country)) +
+    theme(legend.position = "none", axis.ticks.x = element_blank()) +
+    scale_x_continuous(breaks=c(1,2,3,4), labels=levels(mice$Country)) +
+    labs(x="", y="Rank") +
+    scale_colour_manual(values=british.palette)
+  g
+}
+```
+
+```{r variance_between, fig.width=4, fig.height=3}
+m <- getMeans(lifespan4, value="Rank")
+ls4 <- m$mice
+means <- m$means
+
+g <- plotVariance(ls4, means, within=FALSE)
+g
+
+ggsave(paste0(fig, "rank_variance_between.png"), plot=g, device="png", width=3.5, height=3, dpi=300)
+```
+
+```{r kruskal_boot_function}
+generateHdist <- function(n=c(12, 9, 8, 5), nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    L <- lapply(1:length(n), function(k) {
+      data.frame(
+        Country = k,
+        Lifespan = rnorm(n[k])
+      )
+    })
+    d <- do.call(rbind, L)
+    kt <- kruskal.test(Lifespan ~ Country, data=d)
+    kt$statistic
+  })
+  H <- as.numeric(unlist(P))
+}
+```
+
+```{r H_dist}
+H <- generateHdist(nsim=100000) 
+```
+
+```{r chisquare_cut, fig.width=4, fig.height=3}
+kt.chi2 <- as.numeric(kruskal.test(Lifespan ~ Country, data=lifespan4)$statistic)
+x <- seq(kt.chi2, 20, 0.1)
+df <- data.frame(
+  x = c(kt.chi2, x, 20),
+  y = c(0, dchisq(x, 3), 0)
+)
+
+xx <- seq(0,20, 0.02)
+mod <- data.frame(x=xx, y=dchisq(xx, 3))
+
+hdat <- data.frame(H=H)
+g <- ggplot(hdat, aes(x=H, y=..density..)) +
+  theme_classic() +
+  geom_histogram(bins=100, fill=fill.colour.mid) +
+  labs(x=expression(H), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_line(data=mod, aes(x, y)) +
+  geom_polygon(data=df, aes(x, y), colour="blue", fill=fill.colour.dark)
+g
+
+ggsave(paste0(fig, "H_dist_cut.png"), plot=g, device="png", width=3.5, height=3, dpi=300)
 ```
