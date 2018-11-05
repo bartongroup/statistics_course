@@ -1,0 +1,525 @@
+---
+title: "Lecture 5"
+output:
+  html_document:
+    css: tabbed_notebook.css
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = "../cache/lecture5/",
+  fig.path = "../cache/lecture5/"
+)
+fig <- "../fig/L5/"
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+
+```{r parametric_nonparametric, fig.width=3, fig.height=3}
+Ctrl <- c(16.1, 18.2, 21.6, 26.0)
+Treat <- c(16.5, 16.6, 19.2, 21.0, 21.8, 25.6, 26.8)
+dat <- data.frame(
+  Condition = c(rep("Ctrl", length(Ctrl)), rep("Treat", length(Treat))),
+  Value = c(Ctrl, Treat)
+)
+dat$Rank <- rank(dat$Value)
+
+plotOneThing <- function(dat, what, with.error=FALSE) {
+  g <- ggplot(dat) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    geom_point(aes_string(x="Condition", y=what)) +
+    labs(x="", y=what)
+  if(with.error) {
+    m <- dat %>% group_by(Condition) %>% summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
+    g <- g + 
+      geom_errorbar(data=m, aes(x=Condition, ymin=M-SE, ymax=M+SE, colour=Condition), width=0.2) +
+      geom_point(data=m, aes(x=Condition, y=M, colour=Condition), shape=15, size=3) +
+      scale_colour_manual(values=cbPalette)
+  }
+  g
+}
+
+g1 <- plotOneThing(dat, "Value", with.error = TRUE)
+g2 <- plotOneThing(dat, "Rank") + scale_y_continuous(breaks=1:nrow(dat))
+
+
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+
+ggsave(paste0(fig, "parametric_nonparametric.png"), plot=g, device="png", width=3, height=3, dpi=300) 
+```
+
+```{r lifespan_data}
+countU <- function(x, y) {
+  P <- lapply(x, function(xi) {
+    length(which(xi > y))
+  })
+  unlist(P)
+}
+
+wt <- c(0, 7, 56, 112, 464, 537, 575)
+ko <- c(402, 434, 474, 510, 600, 627)
+
+
+prepareUdata <- function(x, y, conditions) {
+  ux <- countU(x, y)
+  uy <- countU(y, x)
+
+  dat <- data.frame(
+    Condition = c(rep(conditions[1], length(x)), rep(conditions[2], length(y))),
+    Lifespan = c(x, y),
+    U = c(ux, uy)
+  )
+  dat$Rank <- rank(dat$Lifespan)
+  dat$Condition <- factor(dat$Condition, levels=conditions)
+  dat$text.adj <- -1
+  dat[dat$Condition == conditions[1], "text.adj"] <- 2
+
+  cnnct <- setNames(expand.grid(x, y), conditions)
+  cnnct$Colour <- cnnct[, conditions[1]] > cnnct[, conditions[2]]
+  
+  list(dat=dat, cnnct=cnnct)
+}
+
+udat <- prepareUdata(wt, ko, c("WT", "KO"))
+lifespan <- udat$dat
+cnnct <- udat$cnnct
+lifespan[1, "text.adj"] <- 3
+```
+
+```{r plot_lifespan, fig.width=2.5, fig.height=3}
+plotU <- function(dat, cnnct, sel=NULL, only.points=FALSE) {
+  if(!is.null(sel)) {
+    dat.sel <- subset(dat, Condition=="WT" & Lifespan==sel)
+    dat.sel$Condition <- factor(dat.sel$Condition, levels=c("WT", "KO"))
+    cnnct.sel <- subset(cnnct, WT==sel)
+  } else {
+    dat.sel <- dat
+    cnnct.sel <- cnnct
+  }
+  dat$Condition <- factor(dat$Condition, levels=c("WT", "KO"))
+  g <- ggplot(dat, aes(Condition, Lifespan)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    labs(x="", y="Lifespan (day)") +
+    scale_colour_manual(values=cbPalette) +
+    geom_point()
+  if(!only.points) {
+    g <- g + geom_segment(data=cnnct.sel, aes(x="KO", xend="WT", y=KO, yend=WT, colour=Colour)) +
+      geom_point() +
+      geom_text(data=dat.sel, aes(x=Condition, y=Lifespan, label=U, hjust=text.adj))
+  }
+  g
+}
+
+g0 <- plotU(lifespan, cnnct, only.points = TRUE)
+g1 <- plotU(lifespan, cnnct, 537)
+g2 <- plotU(lifespan, cnnct)
+g0
+g1
+g2
+
+ggsave(paste0(fig, "lifespan_u_0.png"), plot=g0, device="png", width=2.5, height=3, dpi=300)
+ggsave(paste0(fig, "lifespan_u_1.png"), plot=g1, device="png", width=2.5, height=3, dpi=300)
+ggsave(paste0(fig, "lifespan_u.png"), plot=g2, device="png", width=2.5, height=3, dpi=300)
+```
+
+
+```{r u_plot_data, fig.width=3, fig.height=2}
+P <- lapply(seq(-700, 240, 1), function(dm) {
+  x <- wt - dm
+  y <- ko
+  ux <- sum(countU(x, y))
+  uy <- sum(countU(y, x))
+  u <- min(ux, uy)
+  data.frame(
+    dm = dm,
+    ux = ux,
+    uy = uy,
+    u = u
+  )
+})
+Udist <- do.call(rbind, P)
+
+g <- ggplot(Udist) +
+  theme_classic() +
+  geom_line(aes(dm, ux), colour="red", size=0.3) +
+  geom_line(aes(dm, uy), colour="darkgreen", size=0.3) +
+  geom_line(aes(dm, u), colour="blue", size=1) +
+  labs(x="Difference of the means", y="U")
+g
+
+simplePlot <- function(dat, dm) {
+  dat[dat$Condition == "WT", "Lifespan"] <- dat[dat$Condition == "WT", "Lifespan"] - dm
+  ggplot(dat, aes(x=Condition, y=Lifespan)) +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      axis.line = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      panel.border = element_rect(fill=NA)
+    ) +
+    geom_point() +
+    labs(x="", y="")
+}
+
+
+g1 <- simplePlot(lifespan, -800)
+g2 <- simplePlot(lifespan, -350)
+g3 <- simplePlot(lifespan, 300)
+
+g1
+g2
+g3
+
+ggsave(paste0(fig, "U_example.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300) 
+ggsave(paste0(fig, "U_example_1.png"), plot=g1, device="png", width=1.5, height=2, dpi=300) 
+ggsave(paste0(fig, "U_example_2.png"), plot=g2, device="png", width=1.5, height=2, dpi=300)
+ggsave(paste0(fig, "U_example_3.png"), plot=g3, device="png", width=1.5, height=2, dpi=300)
+```
+
+
+```{r generate_u_dist_function}
+generateUdist <- function(nx, ny, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    x <- rnorm(nx)
+    y <- rnorm(ny)
+    ux <- sum(countU(x, y))
+    uy <- sum(countU(y, x))
+    u <- min(ux, uy)
+  })
+  U <- unlist(P)
+}
+
+```
+
+
+```{r generate_u_dist}
+U <- generateUdist(7, 6, 100000)
+```
+
+```{r plot_udist_function}
+plotUdist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
+  Utab <- table(U) / length(U)
+  udat <- data.frame(
+    U = as.numeric(names(Utab)),
+    freq = as.numeric(Utab)
+  )
+  g1 <- ggplot(udat, aes(U, freq)) +
+    theme_classic() +
+    geom_segment(aes(x=U, xend=U, y=0, yend=freq), colour="grey60") +
+    geom_point() +
+    scale_x_continuous(limits=c(0, xmax)) +
+    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
+    labs(x="U", y="Normalized frequency")
+
+  M <- nx * ny / 2
+  S <- sqrt(nx * ny * (nx + ny + 1) / 12)
+
+  x <- seq(0, 50, 0.1)
+  gs <- data.frame(
+    x = x,
+    y = 2*dnorm(x, mean=M, sd=S)
+  )
+  g2 <- g1 +
+    geom_line(data=gs, aes(x, y), colour="red")
+  g2
+
+  xc <- seq(0, u.cut, 0.1)
+  gc <- data.frame(
+    x = c(xc, u.cut, 0),
+    y = c(2*dnorm(xc, M, S), 0, 0)
+  )
+  g3 <- g2 +
+    geom_polygon(data=gc, aes(x, y), colour="red", fill=fill.colour.dark)
+  g3
+
+  list(g1=g1, g2=g2, g3=g3)
+}
+```
+
+
+```{r plot_u_dist, fig.width=3, fig.height=3}
+pu <- plotUdist(U, 7, 6)
+pu$g1
+pu$g2
+pu$g3
+
+ggsave(paste0(fig, "U_dist.png"), plot=pu$g1, device="png", width=3.5, height=3, dpi=300) 
+ggsave(paste0(fig, "U_dist_norm.png"), plot=pu$g2, device="png", width=3.5, height=3, dpi=300) 
+ggsave(paste0(fig, "U_dist_cut.png"), plot=pu$g3, device="png", width=3.5, height=3, dpi=300) 
+```
+
+```{r generate_udist_3_3}
+U33 <- generateUdist(3, 3)
+```
+
+```{r plot_u_dist_3_3, fig.width=3, fig.height=3}
+pu <- plotUdist(U33, 3, 3, xmax=9, ymax=0.40)
+g2 <- pu$g2 + scale_x_continuous(breaks=0:10, limits=c(0,9))
+g2
+
+ggsave(paste0(fig, "U_dist_33_norm.png"), plot=g2, device="png", width=3.5, height=3, dpi=300) 
+```
+
+```{r plot_3_3, fig.width=2, fig.height=3}
+udat33 <- prepareUdata(c(450, 500, 520), c(530, 550, 600), c("WT", "KO"))
+g <- plotU(udat33$dat, udat33$cnnct)
+g
+
+ggsave(paste0(fig, "U_example_33.png"), plot=g, device="png", width=2, height=3, dpi=300) 
+```
+
+```{r t_comparison, fig.width=4, fig.height=3}
+g1 <- plotOneThing(lifespan, what="Lifespan", with.error = TRUE)
+g2 <- plotOneThing(lifespan, what="Rank") + scale_y_continuous(breaks=1:13)
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+
+ggsave(paste0(fig, "MW_vs_ttest.png"), plot=g, device="png", width=3, height=3, dpi=300)
+```
+
+```{r median_comparison, fig.width=2.5, fig.height=3}
+design <- c(9, 10, 10, 9)
+x <- seq(1, design[1])
+y <- seq(1, design[2]) + max(x)
+x <- c(x, seq(1, design[3]) + max(y))
+y <- c(y, seq(1, design[4]) + max(x))
+medat <- data.frame(
+  X = x,
+  Y = y
+)
+medat <- reshape2::melt(medat, measure.vars=c("X", "Y"))
+
+g <- ggplot(medat, aes(x=variable, y=value)) +
+  theme_classic() +
+  geom_boxplot(aes(fill=variable), outlier.shape = NA) +
+  geom_point() +
+  scale_fill_manual(values=cbPalette) +
+  theme(legend.position = "none") +
+  labs(x="", y="Value")
+
+g
+ggsave(paste0(fig, "MW_median.png"), plot=g, device="png", width=2, height=3, dpi=300)
+```
+
+
+```{r MW_scores, fig.width=4, fig.height=3}
+s1 <- read.table("../data/velos1_peptides_info.txt", sep="\t", header=TRUE, nrows=100)$Score
+s2 <- read.table("../data/velos3_peptides_info.txt", sep="\t", header=TRUE, nrows=100)$Score
+scores <- data.frame(
+  S1 = s1,
+  S2 = s2
+)
+scores <- reshape2::melt(scores, measure.vars=c("S1", "S2"))
+
+wilcox.test(s1, s2, alternative="less", correct=FALSE)
+
+g1 <- ggplot(scores, aes(x=value, y=variable, fill=variable)) +
+  geom_density_ridges(stat="binline", bins=20, scale=0.9) +
+  scale_fill_manual(values=cbPalette) +
+  labs(x="Score", y="") +
+  theme(legend.position = "none") 
+g1
+g2 <- ggplot(scores, aes(x=variable, y=value)) +
+  theme_classic() +
+  geom_boxplot(aes(fill=variable), outlier.shape = NA) +
+  geom_jitter(width=0.1, height=0, size=0.5) +
+  scale_fill_manual(values=cbPalette) +
+  theme(legend.position = "none") +
+  labs(x="", y="Score")
+g2
+ggsave(paste0(fig, "MW_score_dist.png"), plot=g1, device="png", width=4, height=4, dpi=300)
+ggsave(paste0(fig, "MW_score_box.png"), plot=g2, device="png", width=2.5, height=4, dpi=300)
+```
+
+```{r paired_data}
+before <- c(21.4, 20.2, 23.5, 17.5, 18.6, 17.0, 18.9, 19.2)
+after <- c(22.6, 20.9, 23.8, 18.0, 18.4, 17.9, 19.3, 19.1)
+```
+
+```{r paired_figure, fig.width=2.5, fig.height=3}
+pairedPlot <- function(before, after, simple=FALSE) {
+  m <- data.frame(
+    type = c(rep("Before", length(before)), rep("After", length(after))),
+    value = c(before, after)
+  )
+  x <- data.frame(Before=before, After=after, sign=sign(before-after))
+  x$sign <- factor(x$sign, levels=c(-1,1))
+
+  m$type <- factor(m$type, levels=c("Before", "After"))
+  laby <- ifelse(simple, "", "Body mass (g)")
+  g <- ggplot(m, aes(type, value)) +
+    theme_classic() +
+    labs(x="", y=laby) +
+    geom_point() +
+    geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) +
+    geom_point() +
+    theme(legend.position = "none") +
+    scale_color_manual(breaks=c(-1,1), values=cbPalette, drop=FALSE)
+  if(simple) {
+    g <- g +
+      scale_y_continuous(expand=c(0,2)) +
+      scale_x_discrete(expand=c(0,0.3)) +
+      theme(
+        legend.position = "none",
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(fill=NA)
+    )
+  }
+  g
+}
+
+g <- pairedPlot(before, after)
+
+ggsave(paste0(fig, "paired_data.png"), plot=g, device="png", width=2.5, height=3.5, dpi=300)
+```
+
+```{r W_function}
+wilcoxW <- function(x, y) {
+  d <- abs(x - y)
+  r <- rank(d)
+  s <- sign(x - y)
+  W <- sum(s * r)
+}
+```
+
+```{r W_data}
+m0 <- mean(after) - mean(before)
+P <- lapply(seq(-1, 1, 0.01), function(dm) {
+  x <- before
+  y <- after - m0 - dm
+  W <- wilcoxW(x, y)
+  data.frame(
+    dm = dm,
+    W = W
+  )
+})
+wdat <- do.call(rbind, P)
+```
+
+```{r W_plot, fig.width=3, fig.height=3}
+g <- ggplot(wdat, aes(dm, W)) +
+  geom_vline(xintercept = 0, colour="grey60") +
+  geom_hline(yintercept = 0, colour="grey60") +
+  geom_line(colour="blue") +
+  theme_classic() +
+  scale_y_continuous(breaks=c(-30,-20,-10,0,10,20,30)) +
+  labs(x="Difference between the means", "W")
+g
+
+ggsave(paste0(fig, "W_plot.png"), plot=g, device="png", width=3, height=3, dpi=300)
+
+g1 <- pairedPlot(before, after - m0 - 1, simple=TRUE)
+g1   
+g2 <- pairedPlot(before, after - m0 , simple=TRUE)
+g2
+g3 <- pairedPlot(before, after - m0 + 1, simple=TRUE)
+g3
+ 
+ggsave(paste0(fig, "W_plot_1.png"), plot=g1, device="png", width=2, height=2.5, dpi=300)
+ggsave(paste0(fig, "W_plot_2.png"), plot=g2, device="png", width=2, height=2.5, dpi=300)
+ggsave(paste0(fig, "W_plot_3.png"), plot=g3, device="png", width=2, height=2.5, dpi=300)
+```
+
+```{r wilcox_boot_function}
+generateWdist <- function(nx, ny, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    x <- rnorm(nx)
+    y <- rnorm(ny)
+    W <- wilcoxW(x, y)
+  })
+  W <- unlist(P)
+}
+```
+
+```{r plot_wdist_function}
+plotWdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
+  Wtab <- table(W) / length(W)
+  wdat <- data.frame(
+    W = as.numeric(names(Wtab)),
+    freq = as.numeric(Wtab)
+  )
+  g1 <- ggplot(wdat, aes(W, freq)) +
+    theme_classic() +
+    geom_segment(aes(x=W, xend=W, y=0, yend=freq), colour="grey60") +
+    geom_point() +
+    scale_x_continuous(limits=c(-xmax, xmax), breaks=c(-40, -30,-20,-10,0,10,20,30, 40)) +
+    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
+    labs(x="U", y="Normalized frequency")
+
+  M <- 0
+  S <- sqrt(n * (n + 1) * (2*n + 1) / 6)
+
+  x <- seq(-50, 50, 0.1)
+  gs <- data.frame(
+    x = x,
+    y = 2*dnorm(x, mean=M, sd=S)
+  )
+  g2 <- g1 +
+    geom_line(data=gs, aes(x, y), colour="red")
+  g2
+
+  xc1 <- seq(-50, -w.cut, 0.1)
+  gc1 <- data.frame(
+    x = c(xc1, -w.cut, -50),
+    y = c(2*dnorm(xc1, M, S), 0, 0)
+  )
+  
+  xc2 <- seq(w.cut, 50, 0.1)
+  gc2 <- data.frame(
+    x = c(w.cut, xc2, 50),
+    y = c(0, 2*dnorm(xc2, M, S), 0)
+  )
+  g3 <- g2 +
+    geom_polygon(data=gc1, aes(x, y), colour="red", fill=fill.colour.dark) +
+    geom_polygon(data=gc2, aes(x, y), colour="red", fill=fill.colour.dark)
+  g3
+
+  list(g1=g1, g2=g2, g3=g3)
+}
+```
+
+```{r generate_W}
+W <- generateWdist(8, 8, nsim=100000)
+```
+
+```{r wilcox_W_dist, fig.width=3, fig.height=3}
+P <- plotWdist(W, 8)
+P$g1
+P$g2 
+P$g3
+
+ggsave(paste0(fig, "W_dist.png"), plot=P$g1, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "W_dist_norm.png"), plot=P$g2, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "W_dist_norm_cut.png"), plot=P$g3, device="png", width=3, height=3, dpi=300)
+```
+
+
+```{r read_4mice}
+lifespan4 <- read.table("../data/mice_kruskal.txt", sep="\t", header=TRUE)
+lifespan4$Rank <- rank(lifespan4$Lifespan)
+```

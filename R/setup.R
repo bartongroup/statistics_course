@@ -4,6 +4,7 @@ library(knitr)
 library(kableExtra)
 library(gridExtra)
 library(cowplot)
+library(ggridges)
 suppressMessages(library(ggridges))
 suppressMessages(library(viridis))
 suppressMessages(library(dplyr))
@@ -35,4 +36,20 @@ geom_outline <- function(d, breaks, ...) {
     y = as.numeric(table(cut(d, breaks))) / (bins * length(d))
   )
   geom_step(data=st, aes(x, y), ...)
+}
+
+plotOneDist <- function(d, name, title, limits, fun, ..., bins=100, f.bins=100, maxy=NA) {
+  brks <- seq(limits[1], limits[2], length.out = bins)
+  g <- ggplot(data.frame(d=d), aes(x=d, y=..density..)) +
+    geom_histogram(breaks=brks, fill=fill.colour.mid) +
+    #geom_outline(d, brks, colour="grey50") +
+    labs(x=name, y="Density", title=title) +
+    scale_x_continuous(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, maxy))
+  if(!is.null(fun)) {
+    x <- seq(limits[1], limits[2], length.out = f.bins)
+    y <- fun(x, ...)
+    g <- g + geom_line(data=data.frame(x=x, y=y), aes(x, y), size=0.5)
+  }
+  g
 }

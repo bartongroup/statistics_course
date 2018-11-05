@@ -31,27 +31,30 @@ pre code, pre, code {
 ```
 
 
-```{r generate_mouse_sco_eng}
+```{r generate_mouse_sco_eng, eval=FALSE}
 set.seed(666)
 repeat{
-  eng <- rnorm(12, 19, 5)
-  if(abs(mean(eng) - 19) < 1e-4 & abs(median(eng) - 19) < 0.1) break
+  eng <- round(rnorm(12, 19, 5), 1)
+  if(abs(mean(eng) - 19) < 1e-3 & abs(sd(eng) - 5) < 1 & abs(median(eng) - 19) < 0.1) break
 }
 repeat{
-  sco <- rnorm(9, 24, 5)
-  if(abs(mean(sco) - 24) < 1e-4 & abs(median(sco) - 24) < 0.1) break
+  sco <- round(rnorm(9, 24, 5), 1)
+  if(abs(mean(sco) - 24) < 1e-3 & abs(sd(sco) - 5) < 1 & abs(median(sco) - 24) < 0.1) break
 }
+save(eng, sco, file="uk_mice.RData")
 ```
 
+```{r read_mice_data}
+mice <- read.table("../data/mice_2samples.txt", header=TRUE)
+```
+
+
 ```{r eng_sco_mice, fig.width=2, fig.height=3}
-df <- rbind(
-  data.frame(nation="English", mass=eng),
-  data.frame(nation="Scottish", mass=sco)
-)
-g <- ggplot(df, aes(x=nation, y=mass)) +
+set.seed(111)
+g <- ggplot(mice, aes(x=Country, y=Mass)) +
   theme_classic() +
   theme(legend.position = "none") +
-  geom_boxplot(aes(fill=nation), alpha=0.5) +
+  geom_boxplot(aes(fill=Country), alpha=0.5, outlier.shape = NA) +
   scale_fill_manual(values=british.palette) +
   geom_jitter(width=0.15, height=0) +
   labs(x="", y="Body mass (g)")
@@ -69,7 +72,6 @@ mouse <- lapply(1:1000000, function(i) {
 })
 mouse <- unlist(mouse)
 ```
-
 
 
 ```{r fig_mouse_null, fig.width=4, fig.height=3}
