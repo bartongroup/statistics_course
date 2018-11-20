@@ -293,12 +293,12 @@ md <- makeDMT(X1, X2)
 ```
 
 ```{r two_sample_ttest_equal, fig.width=3, fig.height=5}
-g1 <- plotOneDist(md$dM, "Mass difference (g)", expression(Distribution~of~Delta*M), c(-10, 10), NULL)
-g2 <- plotOneDist(md$t.eq, "t", expression(Distribution~of~t), c(-4, 4), dt, N1 + N2 - 2)
-g <- plot_grid(g1, g2, ncol=1)
-g 
+#g1 <- plotOneDist(md$dM, "Mass difference (g)", expression(Distribution~of~Delta*M), c(-10, 10), NULL)
+g1 <- plotOneDist(md$t.eq, "t", "", c(-4, 4), NULL)
+g2 <- plotOneDist(md$t.eq, "t", "", c(-4, 4), dt, N1 + N2 - 2)
 
-ggsave(paste0(fig, "two_sample_ttest.png"), plot=g, device="png", width=3, height=5, dpi=300)
+ggsave(paste0(fig, "two_sample_tdist.png"), plot=g1, device="png", width=3.5, height=3, dpi=300)
+ggsave(paste0(fig, "two_sample_tdist_t.png"), plot=g2, device="png", width=3.5, height=3, dpi=300)
 ```
 
 

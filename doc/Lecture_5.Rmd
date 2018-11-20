@@ -41,11 +41,10 @@ dat <- data.frame(
 )
 dat$Rank <- rank(dat$Value)
 
-plotOneThing <- function(dat, what, with.error=FALSE) {
+plotOneThing <- function(dat, what, with.error=FALSE, width=0) {
   g <- ggplot(dat) +
     theme_classic() +
     theme(legend.position = "none") +
-    geom_point(aes_string(x="Condition", y=what)) +
     labs(x="", y=what)
   if(with.error) {
     m <- dat %>% group_by(Condition) %>% summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
@@ -54,10 +53,11 @@ plotOneThing <- function(dat, what, with.error=FALSE) {
       geom_point(data=m, aes(x=Condition, y=M, colour=Condition), shape=15, size=3) +
       scale_colour_manual(values=cbPalette)
   }
+  g <- g + geom_jitter(aes_string(x="Condition", y=what), width=width, height=0)
   g
 }
 
-g1 <- plotOneThing(dat, "Value", with.error = TRUE)
+g1 <- plotOneThing(dat, "Value", with.error = TRUE, width=0)
 g2 <- plotOneThing(dat, "Rank") + scale_y_continuous(breaks=1:nrow(dat))
 
 
@@ -162,11 +162,12 @@ Udist <- do.call(rbind, P)
 
 g <- ggplot(Udist) +
   theme_classic() +
-  geom_line(aes(dm, ux), colour="red", size=0.3) +
+  geom_line(aes(dm, ux), colour="blue", size=0.3) +
   geom_line(aes(dm, uy), colour="darkgreen", size=0.3) +
-  geom_line(aes(dm, u), colour="blue", size=1) +
   labs(x="Difference of the means", y="U")
 g
+gu <- g + geom_line(aes(dm, u), colour="black", size=1)
+gu
 
 simplePlot <- function(dat, dm) {
   dat[dat$Condition == "WT", "Lifespan"] <- dat[dat$Condition == "WT", "Lifespan"] - dm
@@ -193,6 +194,7 @@ g2
 g3
 
 ggsave(paste0(fig, "U_example.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300) 
+ggsave(paste0(fig, "U_example_withu.png"), plot=gu, device="png", width=3.5, height=3.5, dpi=300) 
 ggsave(paste0(fig, "U_example_1.png"), plot=g1, device="png", width=1.5, height=2, dpi=300) 
 ggsave(paste0(fig, "U_example_2.png"), plot=g2, device="png", width=1.5, height=2, dpi=300)
 ggsave(paste0(fig, "U_example_3.png"), plot=g3, device="png", width=1.5, height=2, dpi=300)
@@ -295,7 +297,7 @@ g1 <- plotOneThing(lifespan, what="Lifespan", with.error = TRUE)
 g2 <- plotOneThing(lifespan, what="Rank") + scale_y_continuous(breaks=1:13)
 
 g <- plot_grid(g1, g2, ncol=2)
-g
+g 
 
 ggsave(paste0(fig, "MW_vs_ttest.png"), plot=g, device="png", width=3, height=3, dpi=300)
 ```
@@ -428,7 +430,7 @@ g <- ggplot(wdat, aes(dm, W)) +
   geom_line(colour="blue") +
   theme_classic() +
   scale_y_continuous(breaks=c(-30,-20,-10,0,10,20,30)) +
-  labs(x="Difference between the means", "W")
+  labs(x="Difference between the means", y="W")
 g
 
 ggsave(paste0(fig, "W_plot.png"), plot=g, device="png", width=3, height=3, dpi=300)
@@ -469,7 +471,7 @@ plotWdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
     geom_point() +
     scale_x_continuous(limits=c(-xmax, xmax), breaks=c(-40, -30,-20,-10,0,10,20,30, 40)) +
     scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
-    labs(x="U", y="Normalized frequency")
+    labs(x="W", y="Normalized frequency")
 
   M <- 0
   S <- sqrt(n * (n + 1) * (2*n + 1) / 6)
@@ -512,7 +514,7 @@ P <- plotWdist(W, 8)
 P$g1
 P$g2 
 P$g3
-
+ 
 ggsave(paste0(fig, "W_dist.png"), plot=P$g1, device="png", width=3, height=3, dpi=300)
 ggsave(paste0(fig, "W_dist_norm.png"), plot=P$g2, device="png", width=3, height=3, dpi=300)
 ggsave(paste0(fig, "W_dist_norm_cut.png"), plot=P$g3, device="png", width=3, height=3, dpi=300)
@@ -529,14 +531,14 @@ lifespan4$Country <- factor(lifespan4$Country, levels=countries)
 
 
 ```{r plot_mice_box_function}
-plotMiceBox <- function(mice, what="Lifespan", ylab="Lifespan (day)", seed=111, limits=NULL) {
+plotMiceBox <- function(mice, what="Lifespan", ylab="Lifespan (day)", seed=111, limits=NULL, width=0.15) {
   set.seed(seed)
   g <- ggplot(mice, aes_string(x="Country", y=what)) +
     theme_classic() +
     theme(legend.position = "none") +
     geom_boxplot(aes(fill=Country), alpha=0.5, outlier.shape = NA) +
     scale_fill_manual(values=british.palette) +
-    geom_jitter(width=0.15, height=0) +
+    geom_jitter(width=width, height=0) +
     labs(x="", y=ylab)
   if(!is.null(limits)) g <- g + ylim(limits)
   g
@@ -565,7 +567,7 @@ rankPlot <- function(mice) {
 
 ```{r anova_rank_plot, fig.width=5, fig.height=3}
 g1 <- plotMiceBox(lifespan4)
-g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank")
+g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank", width=0)
 
 g <- plot_grid(g1, g2, ncol=2)
 g
@@ -579,7 +581,7 @@ ls2$Country <- gsub("WT", "English", ls2$Country)
 ls2$Country <- gsub("KO", "Scottish", ls2$Country)
 ls2$Rank <- rank(ls2$Lifespan, ties.method="random")
 g2.1 <- plotMiceBox(ls2)
-g2.2 <- plotMiceBox(ls2, what="Rank", ylab="Rank")
+g2.2 <- plotMiceBox(ls2, what="Rank", ylab="Rank", width=0)
 g0 <- plot_grid(g2.1, g2.2, ncol=2)
 
 g1 <- rankPlot(ls2) 

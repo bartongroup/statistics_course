@@ -53,3 +53,40 @@ plotOneDist <- function(d, name, title, limits, fun, ..., bins=100, f.bins=100, 
   }
   g
 }
+
+plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01), xlab="", fill=fill.colour.mid) {
+  df <- data.frame(x = x)
+  
+  dst <- ggplot(df, aes(x=x, y=..density..)) +
+    theme_classic() +
+    scale_x_continuous(expand=c(0,0)) +
+    geom_histogram(breaks=brks, fill=fill) +
+    labs(x=xlab, y="Normalized frequency")
+  maxh <- max(ggplot_build(dst)$data[[1]]$density)  # max density in histogram
+  dst <- dst + scale_y_continuous(expand=c(0,0), limits=c(0, maxh*1.03))
+  
+  gout <- geom_outline(x, brks, size=0.3)
+  
+  if(!is.null(cut)) {
+    cut <- brks[which.min(abs(brks - cut))]
+    cut.lo <- cut
+    cut.up <- cut
+    if(side == "both") cut.lo <- -cut.lo
+    df.cut.lower <- df[df$x <= cut.lo,, drop=FALSE]
+    df.cut.upper <- df[df$x >= cut.up,, drop=FALSE]
+    norm.fac.lower <- nrow(df.cut.lower) / nrow(df)
+    norm.fac.upper <- nrow(df.cut.upper) / nrow(df)
+    g.upper <- geom_histogram(data=df.cut.upper, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac.upper))
+    g.lower <- geom_histogram(data=df.cut.lower, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac.lower))
+    if(side == "upper") {
+      return(dst + g.upper + gout)
+    } else if (side == "lower") {
+      return(dst + g.lower + gout)
+    } else if(side == "both") {
+      return(dst + g.upper + g.lower + gout)
+    }
+  } else {
+    return(dst + gout)
+  }
+}
+
