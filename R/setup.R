@@ -31,25 +31,32 @@ myKable <- function(df, row.names=FALSE, col.names=NA, digits=2, bootstrap="cond
 
 geom_outline <- function(d, breaks, ...) {
   bins <- breaks[2] - breaks[1]
+  m <- length(d)
+  x <- breaks[-1] - bins
+  y <- as.numeric(table(cut(d, breaks, right=TRUE)))
+  y <- y / (bins * sum(y))
+  
+  n <- length(x)
   st <- data.frame(
-    x = breaks[-1] - bins,
-    y = as.numeric(table(cut(d, breaks))) / (bins * length(d))
+    x = c(x, x[n] + bins),
+    y = c(y, y[n])
   )
   geom_step(data=st, aes(x, y), ...)
 }
 
-plotOneDist <- function(d, name, title, limits, fun, ..., bins=100, f.bins=100, maxy=NA) {
+plotOneDist <- function(d, name, title, limits, fun=NULL, ..., bins=100, f.bins=100,
+                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50") {
   brks <- seq(limits[1], limits[2], length.out = bins)
   g <- ggplot(data.frame(d=d), aes(x=d, y=..density..)) +
     geom_histogram(breaks=brks, fill=fill.colour.mid) +
-    #geom_outline(d, brks, colour="grey50") +
     labs(x=name, y="Density", title=title) +
     scale_x_continuous(expand=c(0,0)) +
     scale_y_continuous(expand=c(0,0), limits=c(0, maxy))
+  if(with.outline) g <- g + geom_outline(d, brks, colour=outline.colour)
   if(!is.null(fun)) {
     x <- seq(limits[1], limits[2], length.out = f.bins)
     y <- fun(x, ...)
-    g <- g + geom_line(data=data.frame(x=x, y=y), aes(x, y), size=0.5)
+    g <- g + geom_line(data=data.frame(x=x, y=y), aes(x, y), size=0.5, alpha=alpha.line)
   }
   g
 }
@@ -90,3 +97,6 @@ plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01)
   }
 }
 
+se <- function(x) {
+  sd(x, na.rm=TRUE) / sqrt(length(x))
+}

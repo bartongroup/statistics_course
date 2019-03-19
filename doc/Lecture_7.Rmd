@@ -221,18 +221,67 @@ H1 <- generatet(30, 20, n=n)
 ```{r plot_H0_H1, fig.width=3, fig.height=2}
 t0 <- qt(0.975, 2 * n - 2)
 
-g1 <- plotDistributionCut(H0, cut=t0, side="both", brks=seq(-5, 10, 0.1), fill=fill.colour) +
+g1 <- plotDistributionCut(H0, cut=NULL, brks=seq(-5, 10, 0.1), fill=fill.colour)
+g1.cut <- plotDistributionCut(H0, cut=t0, side="both", brks=seq(-5, 10, 0.1), fill=fill.colour) +
   geom_vline(xintercept = -t0) + geom_vline(xintercept = t0)
-g1
+g1.cut
  
-g2 <- plotDistributionCut(H1, cut=t0, side="lower", brks=seq(-5, 10, 0.1), fill=fill.colour) +
+g2 <- plotDistributionCut(H1, cut=NULL, brks=seq(-5, 10, 0.1), fill=fill.colour)
+g2.cut <- plotDistributionCut(H1, cut=t0, side="lower", brks=seq(-5, 10, 0.1), fill=fill.colour) +
   geom_vline(xintercept = -t0) + geom_vline(xintercept = t0)
-g2
+g2.cut
 length(which(H1 > t0)) / 100000
 
 ggsave(paste0(fig, "t_h0.png"), plot=g1, device="png", width=3.5, height=1.9, dpi=300)
 ggsave(paste0(fig, "t_h1.png"), plot=g2, device="png", width=3.5, height=1.9, dpi=300)
+ggsave(paste0(fig, "t_h0_cut.png"), plot=g1.cut, device="png", width=3.5, height=1.9, dpi=300)
+ggsave(paste0(fig, "t_h1_cut.png"), plot=g2.cut, device="png", width=3.5, height=1.9, dpi=300)
 ```
+
+
+
+```{r generate_null_alternative_anova}
+generatea <- function(M1=20, M2=20, M3=20, M4=20, S=5, n=5, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    x1 <- rnorm(n, M1, S)
+    x2 <- rnorm(n, M2, S)
+    x3 <- rnorm(n, M3, S)
+    x4 <- rnorm(n, M4, S)
+    dat <- data.frame(
+      value = c(x1, x2, x3, x4),
+      group = c(rep("1", n), rep("2", n), rep("3", n), rep("4", n))
+    )
+    test <- aov(value ~ group, data=dat)
+    F <- summary(test)[[1]]$F[1] 
+  })
+  unlist(P)
+}
+
+n <- 5
+H0 <- generatea(20, 20, 20, 20, n=n)
+H1 <- generatea(20, 20, 25, 25, n=n)
+```
+
+```{r plot_H0_H1_anova, fig.width=3, fig.height=2}
+f0 <- 2.8
+
+g1.cut <- plotDistributionCut(H0, cut=f0, side="upper", brks=seq(0, 15, 0.1), fill=fill.colour) +
+  scale_x_continuous(expand=c(0,0), limits=c(0,15)) +
+  geom_vline(xintercept = f0)
+g1.cut
+ 
+g2.cut <- plotDistributionCut(H1, cut=f0, side="lower", brks=seq(0, 15, 0.1), fill=fill.colour) +
+  scale_x_continuous(expand=c(0,0), limits=c(0,15)) +
+  geom_vline(xintercept = f0)
+g2.cut
+length(which(H1 > f0)) / 100000
+
+ggsave(paste0(fig, "anova_h0_cut.png"), plot=g1.cut, device="png", width=3.5, height=1.9, dpi=300)
+ggsave(paste0(fig, "anova_h1_cut.png"), plot=g2.cut, device="png", width=3.5, height=1.9, dpi=300)
+```
+
+
+
 
 
 ```{r plot_two_t_function}
