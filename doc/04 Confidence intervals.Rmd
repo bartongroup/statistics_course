@@ -1,0 +1,386 @@
+---
+title: "Confidence intervals 2"
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "04_confidence_intervals"
+source("../R/setup.R")
+library(MASS)
+library(gsl)
+library(ggalt)
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+```{r ci_count_function}
+count.ci.approx <- function(n, conf.level=0.95) {
+  Z <- qnorm((1 + conf.level) / 2)
+  list(
+    n = n,
+    lo = ifelse(n == 0, 0, n - Z * sqrt(n) + (Z^2 - 1) / 3),
+    up = n + Z * sqrt(n + 1) + (Z^2 + 2) / 3
+  )
+}
+
+count.ci <- function(n, conf.level=0.95) {
+  p <- poisson.test(n, conf.level = conf.level)
+  c(
+    n = n,
+    lo = p$conf.int[1],
+    up = p$conf.int[2]
+  )
+}
+```
+
+
+```{r ci_count_example}
+plotCountCI <- function(n, breaks=NULL, no.lab.y=FALSE) {
+  if(is.null(breaks)) breaks <- waiver()
+  d <- as.data.frame((t(sapply(n, count.ci))))
+  d$lo.se <- d$n - sqrt(d$n)
+  d$up.se <- d$n + sqrt(d$n)
+  d$x <- seq_along(d$n)
+
+  laby <- ifelse(no.lab.y, "", "Count")
+  g <- ggplot(d) +
+    theme_classic() +
+    theme(
+      axis.ticks.x = element_blank()
+      #axis.text.x = element_blank()
+    ) +
+    geom_errorbar(aes(x=x, ymin=lo, ymax=up), width=0.15, colour="black") +
+    geom_errorbar(aes(x=x, ymin=lo.se, ymax=up.se), width=0.15, colour="grey60") +
+    geom_point(aes(x, n), size=2) +
+    labs(x=NULL, y=laby) +
+    scale_y_continuous(limits=c(0, max(d[, "up"])*1.03), expand=c(0,0), breaks=breaks) +
+    scale_x_continuous(breaks=d$x, labels=d$n)
+}
+
+g1 <- plotCountCI(0:5, breaks=0:12)
+g2 <- plotCountCI(c(10, 30, 50, 100), breaks=seq(0, 200, 10), no.lab.y = TRUE)
+g <- plot_grid(g1, g2, ncol=, align="h")
+g
+ 
+ggsave(paste0(fig, "count_ci.png"), plot=g, device="png", width=7, height=3.5, dpi=300)
+```
+
+```{r generate_correlation_data}
+set.seed(3652)
+n <- 100000
+r <- 0.7
+dat.cor <- mvrnorm(n=n, mu=c(0, 0), Sigma=matrix(c(1, r, r, 1), nrow=2), empirical=TRUE)
+dat.cor <- setNames(as.data.frame(dat.cor), c("x", "y"))
+
+cor(dat.cor$x, dat.cor$y)
+```
+
+```{r sampling_distribution_r}
+nsim <- 100000
+n <- 30
+sam.cor <- lapply(1:nsim, function(i) {
+  i <- sample(1:nrow(dat.cor), n)
+  r <- cor(dat.cor$x[i], dat.cor$y[i])
+  Z <- 0.5 * log((1 + r) / (1 - r))
+  data.frame(r=r, Z=Z)
+})
+sam.cor <- do.call(rbind, sam.cor)
+```
+
+```{r plot_9_r}
+plotOneSample <- function(n=30, lim=2.5) {
+  i <- sample(1:nrow(dat.cor), n)
+  d <- data.frame(
+    x = dat.cor$x[i],
+    y = dat.cor$y[i]
+  )
+  r <- cor(d$x, d$y)
+  g <- ggplot(d, aes(x, y)) +
+    theme_nothing() +
+    theme(
+      panel.border = element_rect(colour="black", fill=NA),
+      plot.margin = margin(0,0,0,0)
+    ) +
+    xlim(-lim, lim) + ylim(-lim, lim) +
+    geom_point() +
+    annotate("text", x=-1.9, y=1.9, label=round(r, 2), colour="darkgoldenrod4", size=5)
+  g
+}
+
+set.seed(2237)
+P <- lapply(1:9, function(i) plotOneSample())
+g <- plot_grid(plotlist=P, ncol=3)
+g
+ 
+ggsave(paste0(fig, "correlation_9.png"), plot=g, device="png", width=5, height=3.5, dpi=300)
+
+set.seed(3351)
+g <- plotOneSample() + theme_classic()
+g
+ggsave(paste0(fig, "correlation_1.png"), plot=g, device="png", width=3, height=2.5, dpi=300)
+
+```
+
+```{r plot_r_dist}
+g <- plotOneDist(sam.cor$r, "r", "", c(0, 1), with.outline = TRUE) +
+  scale_x_continuous(breaks=seq(0, 1, 0.2), expand=c(0,0)) +
+  theme(plot.margin = margin(r=10))
+g
+ 
+ggsave(paste0(fig, "correlation_dist.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+```
+
+```{r r_dist_cut}
+cuts <- quantile(sam.cor$r, c(0.025, 0.975))
+g1 <- plotDistributionCut(sam.cor$r, cut=cuts[2], locut=cuts[1], side="two", brks=seq(0, 1, 0.01), x.brks=seq(0, 1, 0.2)) 
+
+cuts <- quantile(sam.cor$Z, c(0.025, 0.975))
+g2 <- plotDistributionCut(sam.cor$Z, cut=cuts[2], locut=cuts[1], side="two", brks=seq(0, 1.8, 0.018)) 
+
+
+g1
+g2
+
+ggsave(paste0(fig, "correlation_sampling_dist_cut.png"), plot=g1, device="png", width=3.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "correlation_sampling_fisher.png"), plot=g2, device="png", width=3.5, height=3.5, dpi=300)
+```
+
+```{r pearson_density_function}
+pearson.p <- function(r, ro, n) {
+  f <- hyperg_2F1(0.5, 0.5, (2*n - 1) /2, (ro*r + 1) / 2)
+  num <- (n - 2) * gamma(n - 1) * (1 - ro^2)^((n - 1) / 2) * (1 - r^2) ^ ((n - 4) / 2)
+  den <- sqrt(2 * pi) * gamma(n - 0.5) * (1 - ro*r)^(n - 1.5)
+  num * f / den
+}
+```
+
+```{r function}
+plotFun <- function(FUN, ..., x.grid, cut.lo=NULL, cut.up=NULL, name="") {
+  x <- x.grid
+  x.lo <- x[1]
+  x.up <- x[length(x)]
+  y <- FUN(x, ...)
+  dff <- data.frame(
+    x = c(x.lo, x, x.up),
+    y = c(0, y, 0)
+  )
+  
+  g <- ggplot(dff, aes(x=x, y=y)) +
+    theme_dist +
+    geom_polygon(colour="black", fill=fill.colour) +
+    labs(x=name, y="Density") +
+    scale_x_continuous(limits=c(x.lo, x.up), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dff$y)*1.03), expand=c(0,0))
+
+  if(!is.null(cut.lo)) {
+    xx <- x[x <= cut.lo]
+    df.lo <- data.frame(
+      x = c(x.lo, xx, cut.lo),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.lo, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  
+  if(!is.null(cut.up)) {
+    xx <- x[x >= cut.up]
+    df.up <- data.frame(
+      x = c(cut.up, xx, x.up),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.up, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  g
+}
+```
+
+```{r corr_dist}
+n <- 30
+r <- 0.7
+Z <- 0.5 * log((1+r) / (1-r))
+sigma <- 1 / sqrt(n - 3)
+Z95 <- qnorm(0.975)
+
+Z.lo <- Z - Z95 * sigma
+Z.up <- Z + Z95 * sigma
+
+r.lo <- (exp(2*Z.lo) - 1) / (exp(2*Z.lo) + 1)
+r.up <- (exp(2*Z.up) - 1) / (exp(2*Z.up) + 1)
+
+Z
+sigma
+Z.lo
+Z.up
+r.lo
+r.up
+
+g1 <- plotFun(dnorm, Z, sigma, x.grid=seq(0, 1.8, 0.01), cut.lo=Z.lo, cut.up=Z.up) +
+  geom_segment(aes(x=Z, xend=Z, y=0, yend=dnorm(Z, Z, sigma)))
+g1
+
+g2 <- plotFun(pearson.p, 0.7, 30, x.grid=seq(0, 1, 0.01), cut.lo=r.lo, cut.up=r.up) +
+  geom_segment(aes(x=r, xend=r, y=0, yend=pearson.p(r, 0.7, 30))) +
+  scale_x_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.2))
+g2
+
+ggsave(paste0(fig, "correlation_dist.png"), plot=g2, device="png", width=3.5, height=2.5, dpi=300)
+ggsave(paste0(fig, "fisher_dist.png"), plot=g1, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+
+```{r how_to_do_this_in_R}
+r <- 0.7
+n <- 6
+Z <- 0.5 * log((1+r) / (1-r))
+Z
+sigma <- 1 / sqrt(n - 3)
+sigma
+Z95 <- qnorm(0.975)
+Z95
+Z.limits <- c(Z - Z95 * sigma, Z + Z95 * sigma)
+Z.limits
+r.limits <- (exp(2*Z.limits) - 1) / (exp(2*Z.limits) + 1)
+r.limits
+```
+
+
+```{r generate_sampling_proportion}
+p <- 0.13
+n <- c(998, 50, 10)
+nsim <- 100000
+P <- lapply(n, function(k) {
+  s <- rbinom(nsim, k, p) / k
+  tab <- table(s)
+  tab <- tab / sum(tab)
+})
+```
+
+```{r sampling_proportion_plot}
+onePropPlot <- function(t, point.size=1, xmax=0.6, xlab=NULL) {
+  d <- data.frame(x = as.numeric(names(t)), y = as.numeric(t))
+  ggplot(d) +
+    theme_classic() +
+    geom_segment(aes(x=x, xend=x, y=0, yend=y), colour="grey70") +
+    geom_point(aes(x, y), size=point.size) +
+    labs(x=xlab, y="Probablity") +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(d$y)*1.03)) +
+    scale_x_continuous(limits=c(0, xmax), breaks=seq(0, 1, 0.1))
+}
+
+g1 <- onePropPlot(P[[1]], point.size = 0.8)
+g2 <- onePropPlot(P[[2]], point.size = 1)
+g3 <- onePropPlot(P[[3]], point.size = 1.2, xlab="Proportion")
+g <- plot_grid(g1, g2, g3, ncol=1)
+
+g
+ggsave(paste0(fig, "sampling_dist_proportion.png"), plot=g, device="png", width=3, height=5.5, dpi=300)
+```
+
+```{r wald_function}
+waldProportion <- function(n, S, alpha=0.95) {
+ Z <- qnorm(1 - (1 - alpha) / 2)
+ Sp <- S + Z^2/2
+ np <- n + Z^2
+ pp <- Sp / np
+ SE <- sqrt(pp * (1 - pp) / np)
+ W <- Z * SE
+ v <- c(pp - W, pp + W)
+ v[v < 0] <- 0
+ v[v > 1] <- 1
+ v
+}
+```
+
+
+```{r mice_survival_data}
+sur <- data.frame(
+  lengths = c(3, 3, 1, 5, 3, 6),
+  values = c(10, 8, 6, 2, 1, 0)
+)
+x <- inverse.rle(sur)
+d <- data.frame(
+  day = seq_along(x) - 1,
+  s = x
+)
+d$p <- d$s / 10
+
+se10 <- as.data.frame(t(sapply(d$s, function(s) waldProportion(10, s))))
+names(se10) <- c("p10.lo", "p10.up")
+d <- cbind(d, se10)
+
+se100 <- as.data.frame(t(sapply(d$s, function(s) waldProportion(100, 10*s))))
+names(se100) <- c("p100.lo", "p100.up")
+d <- cbind(d, se100)
+```
+
+```{r mice_survival}
+g0 <- ggplot(d) +
+  theme_classic() +
+  scale_x_continuous(expand=c(0,0), limits=c(0,20)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$p10.up) * 1.03)) +
+  labs(x = "Time (day)", y = "Survival proportion")
+g1 <- g0 + geom_step(aes(x=day, y=p), size=1.1)
+
+g2 <- g1 +
+  geom_ribbon(aes(x=day, ymin=p10.lo, ymax=p10.up), stat="stepribbon", fill=fill.colour) +
+  geom_step(aes(x=day, y=p), size=1.1) 
+
+g3 <- g2 +
+  geom_ribbon(aes(x=day, ymin=p100.lo, ymax=p100.up), stat="stepribbon", fill=fill.colour.dark) + geom_step(aes(x=day, y=p), size=1.1)
+
+g1
+g3 
+  
+ggsave(paste0(fig, "survival.png"), plot=g1, device="png", width=3.5, height=2.5, dpi=300)
+ggsave(paste0(fig, "survival_ci.png"), plot=g3, device="png", width=3.5, height=2.5, dpi=300)
+
+```
+
+
+```{r bootstrap_data}
+set.seed(124)
+x <- c(19.4, 18.2, 11.5, 17.2, 25.7, 19.2, 21.5, 16.7, 15.6, 27.7, 14.3, 16.3)
+n <- length(x)
+nsim <- 100000
+
+m.boot <- sapply(1:nsim, function(i) mean(sample(x, n, replace=TRUE)))
+m.lo <- quantile(m.boot, 0.025)
+m.up <- quantile(m.boot, 0.975)
+```
+
+```{r bootstrap_plot}
+g <- plotDistributionCut(m.boot, cut=m.up, locut=m.lo, side="two", brks=seq(13, 24, 0.05), x.brks = seq(10, 30, 2))
+g
+
+ggsave(paste0(fig, "bootstrap.png"), plot=g, device="png", width=4, height=3.5, dpi=300)
+
+
+M <- mean(x)
+SE <- sd(x) / sqrt(n)
+t <- qt(0.975, n - 1)
+c(m.lo, m.up)
+c(M - t * SE, M + t * SE)
+```

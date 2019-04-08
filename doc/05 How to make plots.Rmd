@@ -1,0 +1,165 @@
+---
+title: "Data presentation"
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "05_data_presentation"
+source("../R/setup.R")
+library(lemon)
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+```{r good_plot}
+set.seed(344)
+gpModel <- function(x, A=1, tau=16) {
+  y <- A * exp(-x / tau)
+}
+x <- c(0.5, 1, 2, 4, 8, 12, 16, 24, 48)
+m <- gpModel(x)
+y <- sapply(m, function(M) {
+  s <- rnorm(12, M, 0.15)
+  c(mean=mean(s), se=sd(s) / sqrt(length(s)))
+}) %>% t %>% as.data.frame
+
+d <- data.frame(
+  x = x,
+  y
+)
+d$w <- 1 / d$se^2
+d$w <- d$w / sum(d$w)
+
+fit <- nls(mean ~ A * exp(-x / tau), data=d, weights=d$w, start=c(A=1, tau=10))
+cf <- summary(fit)$coefficients[,1:2]
+cf
+cf[, 2] * qnorm(0.975)
+
+xx <- seq(0, 50, 0.1)
+dm <- data.frame(
+  x = xx,
+  y = cf[1, 1] * exp(-xx / cf[2, 1])
+)
+
+
+g <- ggplot(d) +
+  theme_classic() +
+  geom_line(data=dm, aes(x, y), colour="darkolivegreen4") +
+  geom_errorbar(aes(x=x, ymin=mean-se, ymax=mean+se), width=0.2) +
+  geom_point(aes(x=x, y=mean)) +
+  labs(x= "Time (h)", y="Relative abundance") +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$mean + d$se) * 1.03))
+g
+
+ggsave(paste0(fig, "good_plot.png"), plot=g, device="png", width=4.5, height=3, dpi=300) 
+```
+
+```{r lines_and_symbols, fig.width=9}
+emptyBox <- function(ann="") {
+  ggplot() +
+    theme_classic() +
+    theme(
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.line = element_blank(),
+      plot.background = element_rect(fill=NA, colour="black"),
+      plot.margin = margin(t=1, b=0, l=5, r=5)
+    ) +
+    labs(x=NULL, y=NULL, title=NULL) +
+    scale_x_continuous(expand=c(0.2,0)) +
+    scale_y_continuous(expand=c(0.2,0)) +
+    annotate("text", Inf, -Inf, label=ann, hjust=1, vjust=-0.4)
+}
+
+# symbol shape
+x <- 1:5
+d1 <- data.frame(x=x, y=x^2)
+gt <- emptyBox("bad") + geom_point(data=d1, aes(x, y), shape=8, size=2)
+gb <- emptyBox("good") + geom_point(data=d1, aes(x, y), shape=16, size=1.2)
+g1 <- plot_grid(gt, gb, ncol=1)
+
+# two groups symbol
+x <- 1:20
+d2 <- data.frame(
+  x = x,
+  y1 = x^0.5,
+  y2 = 0.3 + x^0.51
+)
+gt <- emptyBox("bad") +
+  geom_point(data=d2, aes(x, y1), shape=21, fill="black") +
+  geom_point(data=d2, aes(x, y2), shape=21, fill="black")
+gb <- emptyBox("good") + 
+  geom_point(data=d2, aes(x, y1), shape=21, fill="white") +
+  geom_point(data=d2, aes(x, y2), shape=21, fill="black")
+g2 <- plot_grid(gt, gb, ncol=1)
+
+# large symbols
+x <- 1:200
+y <- x + rnorm(length(x), 0, 10)
+d3 <- data.frame(x=x, y=y)
+gt <- emptyBox("bad") + geom_point(data=d3, aes(x, y), shape=0, size=2)
+gb <- emptyBox("good") + geom_point(data=d3, aes(x, y), shape=16, size=0.4)
+g3 <- plot_grid(gt, gb, ncol=1)
+
+# symbols vs lines
+x <- 1:100
+y1 <- log(x) + rnorm(length(x), 0, 0.05)
+y2 <- 1.03 * log(x) * cos(0.04*x/(2*pi)) + rnorm(length(x), 0, 0.05)
+d4 <- data.frame(x=x, y1=y1, y2=y2)
+gt <- emptyBox("not great") + 
+  geom_point(data=d4, aes(x, y1), shape=16, size=0.8, colour="red") +
+  geom_point(data=d4, aes(x, y2), shape=16, size=0.8, colour="green")
+gb <- emptyBox("better") + 
+  geom_line(data=d4, aes(x, y1), colour=cbPalette[1], alpha=0.8) +
+  geom_line(data=d4, aes(x, y2), colour=cbPalette[2], alpha=0.8)
+g4 <- plot_grid(gt, gb, ncol=1)
+
+# spline
+x <- 1:5
+y1 <- c(1, 5, 10, 9, 6)
+y2 <- c(2, 4, 7, 5, 3.5)
+d5 <- data.frame(x=x, y1=y1, y2=y2)
+
+s1 <- spline(x, y1, n=100)
+s2 <- spline(x, y2, n=100)
+d5s <- data.frame(x=s1$x, y1=s1$y, y2=s2$y)
+
+gt <- emptyBox("bad") +
+  geom_line(data=d5s, aes(x, y1), colour="grey40") +
+  geom_line(data=d5s, aes(x, y2), colour="black") +
+  geom_point(data=d5, aes(x, y1), shape=22, colour="grey40", fill="white") +
+  geom_point(data=d5, aes(x, y2), shape=22, colour="black", fill="black")
+gb <- emptyBox("good") + 
+  geom_pointpath(data=d5, aes(x, y1), shape=22, colour="grey40", fill="white", linecolour="grey40") +
+  geom_pointpath(data=d5, aes(x, y2), shape=22, colour="black", fill="black")
+g5 <- plot_grid(gt, gb, ncol=1)
+
+
+g <- plot_grid(g1, g2, g3, g4, g5, nrow=1)
+g
+ggsave(paste0(fig, "lines_and_symbols.png"), plot=g, device="png", width=7, height=3, dpi=300) 
+```

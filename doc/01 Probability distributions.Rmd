@@ -3,6 +3,8 @@ title: "Probability distributions"
 output:
   html_document:
     css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
 params: 
   output_dir: "../output"
 ---
@@ -32,7 +34,7 @@ pre code, pre, code {
 ```
 
 
-```{r flg_expression, fig.width=2, fig.height=3}
+```{r flg_expression}
 set.seed(111)
 ctrl <- c(41723, 1000*rnorm(29, 32, 8))
 trt <- c(19786, 1000*rnorm(29, 28, 6))
@@ -112,7 +114,7 @@ geom_cut <- function(lo, up, FUN, ..., n=100, colour="black", fill=fill.colour.d
 ```
 
 
-```{r continuous_example,  fig.width=4, fig.height=3}
+```{r continuous_example}
 dof <- 5
 
 x <- seq(0, 30, 0.1)
@@ -136,7 +138,7 @@ ggsave(paste0(fig, "pdist_continuous.png"), plot=g, device="png", width=3.5, hei
 ```
 
 
-```{r normal, fig.width=3, fig.height=2}
+```{r normal}
 M <- 10
 S <- 1.5
 
@@ -177,7 +179,7 @@ ggsave(paste0(fig, "normal_example_1.png"), plot=g1, device="png", width=3.5, he
 ggsave(paste0(fig, "normal_example_2.png"), plot=g2, device="png", width=3.5, height=3, dpi=300)
 ```
 
-```{r baseball_height, fig.width=3, fig.height=3}
+```{r baseball_height}
 bb <- read.table("../data/baseball.txt", header=TRUE, sep="\t", quote="")
 bb$height <- 2.54 * bb$Height.inches.
 
@@ -195,7 +197,7 @@ ggsave(paste0(fig, "baseball_height.png"), plot=g, device="png", width=5, height
 ```
 
 
-```{r lognormal_dist, fig.width=3, fig.height=3}
+```{r lognormal_dist}
 td <- read.table("../data/testdist.dat")
 td$int <- td$V1 / 1e6
 td$lint <- log10(td$V1)
@@ -228,8 +230,31 @@ ggsave(paste0(fig, "lognormal_1.1.png"), plot=g1.1, device="png", width=3.5, hei
 ggsave(paste0(fig, "lognormal_2.1.png"), plot=g2.1, device="png", width=3.5, height=3, dpi=300)
 ```
 
+```{r lognormal_data}
+d <- read.table("../data/slc7a5_read_counts.txt", sep="\t", header=TRUE)
+mx <- max(c(d$wt.1, d$wt.2)) / 1e6
 
-```{r poisson_plates, fig.width=3, fig.height=2.5}
+g1 <- ggplot(d, aes(wt.1/1e6, wt.2/1e6)) +
+  theme_classic() +
+  geom_point(alpha=0.2) +
+  scale_x_continuous(expand=c(0,0), limits=c(0, mx*1.03)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, mx*1.03)) +
+  labs(x=expression(I[1]~(x10^6)), y=expression(I[2]~(x10^6)))
+g1
+
+g2 <- ggplot(d, aes(log10(wt.1+0.5), log10(wt.2+0.5))) +
+  theme_classic() +
+  geom_point(alpha=0.2) +
+  scale_x_continuous(expand=c(0,0), limits=c(-0.8, 6)) +
+  scale_y_continuous(expand=c(0,0), limits=c(-0.8, 6)) +
+  labs(x=expression(log[10]~I[1]), y=expression(log[10]~I[2]))
+g2
+ggsave(paste0(fig, "lognormal_data_lin.png"), plot=g1, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "lognormal_data_log.png"), plot=g2, device="png", width=3, height=2.5, dpi=300)
+```
+
+
+```{r poisson_plates}
 set.seed(226)
 p <- rpois(20, 7)
 d <- data.frame(plate=seq_along(p), cnt = p)
@@ -261,7 +286,7 @@ ggsave(paste0(fig, "poisson_dist.png"), plot=g2, device="png", width=3.5, height
 ```
 
 
-```{r poisson_dist, fig.height=8, fig.width=3}
+```{r poisson_dist}
 mus <- c(0.3, 1, 4, 10)
 P <- lapply(mus, function(mu) {
   xp <- 0:20
@@ -280,6 +305,7 @@ P <- lapply(mus, function(mu) {
     geom_segment(data=p, aes(x=x, xend=x, y=y, yend=0), colour="grey80") +
     geom_point(data=p, aes(x, y), shape=21, fill="white") +
     geom_line(data=d, aes(x, y), colour="red") +
+    #stat_function(fun=dnorm, args=list(mean=mu, sd=sqrt(mu)), colour="red") +
     scale_x_continuous(breaks=c(0,5,10,15,20)) +
     scale_y_continuous(expand=c(0,0), limits=c(0, max(d$y) * 1.07)) +
     labs(x="k", y="")
@@ -317,3 +343,49 @@ ggsave(paste0(fig, "horse_kicks.png"), plot=g, device="png", width=4, height=5, 
 
 ```
 
+
+```{r binomial}
+genBinom <- function(size, prob) {
+  x <- 0:size
+  d <- data.frame(
+    x = x,
+    y = dbinom(x, size=size, prob=prob)
+  )
+}
+
+d <- genBinom(8, 0.5)
+g1 <- ggplot(d) +
+  geom_col(aes(x, y), fill=fill.colour, width=0.7, colour="grey30") +
+  scale_x_continuous(breaks=0:8) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,max(d$y)*1.03)) +
+  labs(x="Number of successes", y="Probability")
+g1
+
+d <- genBinom(100, 0.5)
+g2 <- ggplot(d) +
+  geom_segment(aes(x=x, xend=x, y=y, yend=0), colour="grey70") +
+  geom_point(aes(x=x, y=y), size=2) +
+  stat_function(fun=dnorm, args=list(mean=50, sd=sqrt(25)), colour="red") +
+  scale_x_continuous(limits=c(35, 65)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,max(d$y)*1.03)) +
+  labs(x="Number of successes", y="Probability")
+g2
+
+d <- genBinom(100, 0.01)
+mu <- 100 * 0.01
+d$p <- dpois(d$x, mu)
+g3 <- ggplot(d) +
+  geom_col(aes(x, p), fill=fill.colour, width=0.7, colour="grey30") +
+  geom_segment(aes(x=x, xend=x, y=y, yend=0), colour="grey70") +
+  geom_point(aes(x, y), size=2) +
+  scale_x_continuous(breaks=0:10, limits=c(-0.5,10)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,0.4)) +
+  labs(x="Number of successes", y="Probability")
+g3
+
+
+
+ggsave(paste0(fig, "binomial_example.png"), plot=g1, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "binomial_example_normal.png"), plot=g2, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "binomial_example_poisson.png"), plot=g3, device="png", width=4, height=3, dpi=300)
+```

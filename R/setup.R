@@ -5,6 +5,7 @@ library(kableExtra)
 library(gridExtra)
 library(cowplot)
 library(ggridges)
+library(reshape2)
 suppressMessages(library(ggridges))
 suppressMessages(library(viridis))
 suppressMessages(library(dplyr))
@@ -61,12 +62,13 @@ plotOneDist <- function(d, name, title, limits, fun=NULL, ..., bins=100, f.bins=
   g
 }
 
-plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01), xlab="", fill=fill.colour.mid) {
+plotDistributionCut <- function(x, cut=NULL, locut=NULL, side="upper", brks=seq(-1, 1, 0.01), 
+                                xlab="", fill=fill.colour.mid, x.brks=waiver()) {
   df <- data.frame(x = x)
   
   dst <- ggplot(df, aes(x=x, y=..density..)) +
     theme_classic() +
-    scale_x_continuous(expand=c(0,0)) +
+    scale_x_continuous(expand=c(0,0), breaks=x.brks) +
     geom_histogram(breaks=brks, fill=fill) +
     labs(x=xlab, y="Normalized frequency")
   maxh <- max(ggplot_build(dst)$data[[1]]$density)  # max density in histogram
@@ -79,6 +81,7 @@ plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01)
     cut.lo <- cut
     cut.up <- cut
     if(side == "both") cut.lo <- -cut.lo
+    if(side == "two") cut.lo <- brks[which.min(abs(brks - locut))]
     df.cut.lower <- df[df$x <= cut.lo,, drop=FALSE]
     df.cut.upper <- df[df$x >= cut.up,, drop=FALSE]
     norm.fac.lower <- nrow(df.cut.lower) / nrow(df)
@@ -89,7 +92,7 @@ plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01)
       return(dst + g.upper + gout)
     } else if (side == "lower") {
       return(dst + g.lower + gout)
-    } else if(side == "both") {
+    } else {
       return(dst + g.upper + g.lower + gout)
     }
   } else {
@@ -97,6 +100,43 @@ plotDistributionCut <- function(x, cut=NULL, side="upper", brks=seq(-1, 1, 0.01)
   }
 }
 
+
+plotFun <- function(FUN, ..., x.grid, cut.lo=NULL, cut.up=NULL, name="") {
+  x <- x.grid
+  x.lo <- x[1]
+  x.up <- x[length(x)]
+  y <- FUN(x, ...)
+  dff <- data.frame(
+    x = c(x.lo, x, x.up),
+    y = c(0, y, 0)
+  )
+  
+  g <- ggplot(dff, aes(x=x, y=y)) +
+    theme_dist +
+    geom_polygon(colour="black", fill=fill.colour) +
+    labs(x=name, y="Density") +
+    scale_x_continuous(limits=c(x.lo, x.up), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dff$y)*1.03), expand=c(0,0))
+  
+  if(!is.null(cut.lo)) {
+    xx <- x[x <= cut.lo]
+    df.lo <- data.frame(
+      x = c(x.lo, xx, cut.lo),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.lo, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  
+  if(!is.null(cut.up)) {
+    xx <- x[x >= cut.up]
+    df.up <- data.frame(
+      x = c(cut.up, xx, x.up),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.up, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  g
+}
 se <- function(x) {
   sd(x, na.rm=TRUE) / sqrt(length(x))
 }
