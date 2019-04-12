@@ -13,6 +13,8 @@ params:
 root <- "05_data_presentation"
 source("../R/setup.R")
 library(lemon)
+library(ggbeeswarm)
+library(scales)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -77,6 +79,47 @@ g
 
 ggsave(paste0(fig, "good_plot.png"), plot=g, device="png", width=4.5, height=3, dpi=300) 
 ```
+
+```{r show_your_data, fig.width=7, fig.height=3}
+set.seed(1001)
+n1 <- 30
+n2 <- 35
+d <- data.frame(
+  type = c(rep("WT", n1), rep("KO", n2)),
+  value = c(rnorm(n1, 20, 5), rnorm(n2, 25, 7))
+)
+d$type <- relevel(d$type, ref="WT")
+
+dm <- d %>% group_by(type) %>% summarise(M = mean(value), SE = sd(value) / sqrt(n()))
+
+g0 <- ggplot() +
+  theme_classic() +
+  theme(legend.position = "none") +
+  scale_fill_manual(values=cbPalette) +
+  labs(x=NULL, y=NULL)
+  
+g1 <- g0 +
+  geom_errorbar(data=dm, aes(x=type, ymin=M-SE, ymax=M+SE), width=0.3, colour="black") +
+  geom_col(data=dm, aes(x=type, y=M, fill=type)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(dm$M + dm$SE) * 1.03 )) +
+  labs(y="Mass (g)")
+
+g2 <- g0 +
+  geom_boxplot(data=d, aes(x=type, y=value, fill=type))
+
+g3 <- g0 +
+  geom_jitter(data=d, aes(x=type, y=value, fill=type), shape=21, width=0.2, height=0)
+
+
+g4 <- g0 +
+  geom_beeswarm(data=d, aes(x=type, y=value, fill=type), shape=21, cex=4.5)
+ 
+g <- plot_grid(g1, g2, g3, g4, ncol=4, align = "v")
+g
+
+ggsave(paste0(fig, "show_your_data.png"), plot=g, device="png", width=7, height=3, dpi=300) 
+```
+
 
 ```{r lines_and_symbols, fig.width=9}
 emptyBox <- function(ann="") {
@@ -162,4 +205,214 @@ g5 <- plot_grid(gt, gb, ncol=1)
 g <- plot_grid(g1, g2, g3, g4, g5, nrow=1)
 g
 ggsave(paste0(fig, "lines_and_symbols.png"), plot=g, device="png", width=7, height=3, dpi=300) 
+```
+
+
+```{r log_lin_1, fig.width=6, fig.height=6}
+set.seed(43)
+
+d0 <- read.table("../data/WT_lev.tsv", header=FALSE, sep="\t")
+d0 <- d0[, c(2, 3)]
+names(d0) <- c("x", "y")
+d0 <- d0[d0$x > 0 & d0$y > 0,]
+d <- d0[sample(1:nrow(d0), 1000), ]
+
+mx <- max(d) * 1.03
+mx <- 25000
+p.size <- 0.8
+
+g1 <- ggplot(d) +
+  theme_classic() +
+  theme(plot.margin = margin(r=15)) +
+  geom_point(aes(x, y), size=p.size) +
+  scale_x_continuous(expand=c(0,0), limits=c(0, mx)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, mx)) +
+  labs(x="Sample 1", y="Sample 2")
+g2 <- ggplot(d) +
+  theme(plot.margin = margin(r=15)) +
+  theme_classic() +
+  geom_point(aes(log10(x), log10(y)), size=p.size) +
+  labs(x=expression(log[10]~Sample~1), y=expression(log[10]~Sample~2))
+
+g3 <- plotOneDist(d0$x, "Expression", "", c(0, 25000), with.outline = TRUE) + theme_classic() +   theme(plot.margin = margin(r=15)) 
+
+g4 <- plotOneDist(log10(d0$x), expression(log[10]~expression), "", c(-0.1, 5.5), with.outline = TRUE) + theme_classic()
+
+g <- plot_grid(g1, g3, g2, g4, ncol=2, align="hv")
+g
+
+ggsave(paste0(fig, "linear_vs_logarithmic_1.png"), plot=g, device="png", width=7, height=6, dpi=300)
+```
+
+```{r log_lin_2, fig.width=6, fig.height=6}
+d <- data.frame(
+  x = 1:6 / 6,
+  y1 = c(1.3, 1.5, 2.5, 3.0, 3.6, 4.1),
+  s1 = 0.2
+)
+d$y2 <- 10^d$y1
+d$s2 <- log(10) * d$y2 * d$s1
+
+g0 <- ggplot(d) +
+  theme_classic() +
+  scale_x_continuous(expand=c(0,0), limits=c(0,1.1), breaks=seq(0,1,0.2)) +
+  labs(x="Time (d)")
+  
+g1 <- g0 +
+  geom_errorbar(aes(x=x, ymin=y2-s2, ymax=y2+s2), width=0.03) +
+  geom_point(aes(x=x, y=y2)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,20000)) +
+  labs(y="Abundance")
+
+g2 <- g0 +
+  geom_errorbar(aes(x=x, ymin=y1-s1, ymax=y1+s1), width=0.03) +
+  geom_point(aes(x=x, y=y1)) +
+  scale_y_continuous() +
+  labs(y=expression(log[10]~abundance))
+
+set.seed(77)
+n1 <- 50
+n2 <- 100
+d <- data.frame(
+  type = c(rep("WT", n1), rep("KO", n2)),
+  log.value = c(rnorm(n1, 2.1, 0.3), rnorm(n2, 1.1, 0.2))
+)
+d$type <- relevel(d$type, ref="WT")
+d$value <- as.integer(10^d$log.value)
+d$log.value <- log10(d$value)
+
+g0 <- ggplot(d) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  labs(x=NULL, y="Cell count") +
+  theme(
+    axis.title.y = element_text(margin = margin(t = 0, r = -10, b = 0, l = 0))
+  ) +
+  scale_fill_manual(values=cbPalette)
+
+g3 <- g0 +
+  geom_beeswarm(aes(x=type, y=value, fill=type), shape=21, colour="grey40", cex=1.2, size=0.7) +
+  #geom_boxplot(aes(x=type, y=value), fill=NA, colour="grey70", width=0.6, outlier.shape=NA) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$value)*1.03))
+
+g4 <- g0 +
+  geom_beeswarm(aes(x=type, y=value, fill=type), shape=21, colour="grey40", cex=2.2) +
+  #geom_boxplot(aes(x=type, y=value), fill=NA, colour="grey70", width=0.6, outlier.shape=NA) +
+  scale_y_log10(breaks=c(5, 10, 50, 100, 500)) +
+  annotation_logticks(sides="l") +
+  theme(axis.ticks.y = element_blank())
+
+
+g <- plot_grid(g1, g3, g2, g4, ncol=2, align="hv")
+g
+
+ggsave(paste0(fig, "linear_vs_logarithmic_2.png"), plot=g, device="png", width=7, height=6, dpi=300)
+
+```
+
+
+```{r error_bars, fig.width=12, fig.height=3}
+set.seed(1410)
+n1 <- 8
+d1 <- data.frame(
+  x = 1:n1,
+  y = n1 - 1:n1 + rnorm(n1, 0, 1.5),
+  s = rnorm(n1, 0.8, 0.1)
+)
+
+g1 <- emptyBox("") +
+  geom_errorbar(data=d1, aes(x=x, ymin=y-s, ymax=y+s), width=0.2) +
+  geom_point(data=d1, aes(x=x, y=y))
+
+n2 <- 5
+d2 <- data.frame(
+  x = 1:n2,
+  y = 1:n2 + rnorm(n2, 0, 1.5),
+  sy = rnorm(n2, 0.4, 0.1),
+  sx = 0.3
+)
+
+g2 <- emptyBox("") +
+  geom_errorbar(data=d2, aes(x=x, ymin=y-sy, ymax=y+sy), width=0.12) +
+  geom_errorbarh(data=d2, aes(y=y, xmin=x-sx, xmax=x+sx), height=0.08) +
+  geom_point(data=d2, aes(x=x, y=y), shape=22, fill="white", size=1.5)
+
+n3 <- 30
+d3 <- data.frame(
+  x = 1:n3,
+  y = sin(1.3 * 1:n3/n3) + rnorm(n3, 0, 0.03),
+  s = 0.06
+)
+g3 <- emptyBox("") +
+  geom_errorbar(data=d3, aes(x=x, ymin=y-s, ymax=y+s), width=0, colour="grey70") +
+  geom_point(data=d3, aes(x=x, y=y), size=1.5)
+
+
+n4 <- 5
+d4 <- data.frame(
+  x = 1:n4,
+  y = rnorm(n4, 5, 1),
+  s = rnorm(n4, 1, 0.1)
+)
+g4 <- emptyBox("") +
+  geom_col(data=d4, aes(x=x, y=y), fill=fill.colour, colour="black") +
+  geom_errorbar(data=d4, aes(x=x, ymin=y-s, ymax=y+s), width=0.2) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d4$y + d4$s) * 1.2))
+
+g <- plot_grid(g1, g2, g3, g4, nrow=1)
+
+g
+ggsave(paste0(fig, "error_bars.png"), plot=g, device="png", width=9, height=2.3, dpi=300)
+```
+
+```{r boxplot}
+n <- 250
+d <- data.frame(
+  x = 1,
+  y = rnorm(n)
+)
+
+g <- ggplot(d) +
+  theme_nothing() +
+  geom_boxplot(aes(x,y), fill=fill.colour)
+
+g
+ggsave(paste0(fig, "boxplot.png"), plot=g, device="png", width=1.5, height=5, dpi=300)
+```
+
+
+```{r boxplot_examples}
+set.seed(666)
+n <- c(50, 30, 40, 20)
+d <- data.frame(
+  type = c(rep("WT", n[1]), rep("KO1", n[2]), rep("KO2", n[3]), rep("KO3", n[4])),
+  value = c(rnorm(n[1], 20, 5), rnorm(n[2], 25, 3), rnorm(n[3], 30, 4), rnorm(n[4], 18, 7))
+)
+dm <- data.frame(
+  x = "WT",
+  y = median(d[d$type == "WT", "value"])
+)
+
+g1 <- ggplot() +
+  theme_classic() +
+  theme(legend.position = "none", plot.margin = margin(r=30)) +
+  geom_boxplot(data=dm, aes(x=x, middle=y, ymin=y, lower=y, upper=y, ymax=y), stat="identity", width=0.7, lwd=0.6) +
+  geom_beeswarm(data=d[d$type == "WT", ], aes(type, value), size=0.8, cex=2.5, shape=21, fill=fill.colour) +
+  geom_boxplot(data=d[d$type != "WT", ], aes(type, value, fill=type)) +
+  scale_fill_manual(values=cbPalette) +
+  labs(x=NULL, y="Value")
+
+
+fastq <- read.table("../data/fastq_quality.txt", sep="", header=TRUE)
+g2 <- ggplot(fastq) +
+  theme_classic() +
+  theme(axis.title.y.right = element_blank(), axis.title.x.top = element_blank()) +
+  geom_boxplot(aes(x=Base, middle=Median, ymin=X10thPercentile, lower=LowerQuartile, upper=UpperQuartile, ymax=X90thPercentile), stat="identity", fill=fill.colour, width=0.7, fatten=0.5, lwd=0.3) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,41.5), sec.axis = dup_axis()) +
+  scale_x_continuous(breaks=c(1, seq(5,50,5)), sec.axis = dup_axis()) +
+  labs(x="Position in read (bp)", y="Sequence quality")
+
+g <- plot_grid(g1, g2, nrow=1, rel_widths = c(1,2.2), align="h")
+ggsave(paste0(fig, "boxplot_examples.png"), plot=g, device="png", width=7, height=3, dpi=300)
+
 ```
