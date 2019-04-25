@@ -1,0 +1,995 @@
+---
+title: "10 Nonparametric tests"
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "10_nonparametric_tests"
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+
+```{r parametric_nonparametric, fig.width=3, fig.height=3}
+Ctrl <- c(16.1, 18.2, 21.6, 26.0)
+Treat <- c(16.5, 16.6, 19.2, 21.0, 21.8, 25.6, 26.8)
+dat <- data.frame(
+  Condition = c(rep("Ctrl", length(Ctrl)), rep("Treat", length(Treat))),
+  Value = c(Ctrl, Treat)
+)
+dat$Rank <- rank(dat$Value)
+
+plotOneThing <- function(dat, what, with.error=FALSE, width=0) {
+  g <- ggplot(dat) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    labs(x="", y=what)
+  if(with.error) {
+    m <- dat %>% group_by(Condition) %>% summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
+    g <- g + 
+      geom_errorbar(data=m, aes(x=Condition, ymin=M-SE, ymax=M+SE, colour=Condition), width=0.2) +
+      geom_point(data=m, aes(x=Condition, y=M, colour=Condition), shape=15, size=3) +
+      scale_colour_manual(values=cbPalette)
+  }
+  g <- g + geom_jitter(aes_string(x="Condition", y=what), width=width, height=0)
+  g
+}
+
+g1 <- plotOneThing(dat, "Value", with.error = TRUE, width=0)
+g2 <- plotOneThing(dat, "Rank") + scale_y_continuous(breaks=1:nrow(dat))
+
+
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+
+ggsave(paste0(fig, "parametric_nonparametric.png"), plot=g, device="png", width=3, height=3, dpi=300) 
+```
+
+```{r lifespan_data}
+countU <- function(x, y) {
+  P <- lapply(x, function(xi) {
+    length(which(xi > y))
+  })
+  unlist(P)
+}
+
+wt <- c(0, 7, 56, 112, 464, 537, 575)
+ko <- c(402, 434, 474, 510, 600, 627)
+
+
+prepareUdata <- function(x, y, conditions) {
+  ux <- countU(x, y)
+  uy <- countU(y, x)
+
+  dat <- data.frame(
+    Condition = c(rep(conditions[1], length(x)), rep(conditions[2], length(y))),
+    Lifespan = c(x, y),
+    U = c(ux, uy)
+  )
+  dat$Rank <- rank(dat$Lifespan)
+  dat$Condition <- factor(dat$Condition, levels=conditions)
+  dat$text.adj <- -1
+  dat[dat$Condition == conditions[1], "text.adj"] <- 2
+
+  cnnct <- setNames(expand.grid(x, y), conditions)
+  cnnct$Colour <- cnnct[, conditions[1]] > cnnct[, conditions[2]]
+  
+  list(dat=dat, cnnct=cnnct)
+}
+
+udat <- prepareUdata(wt, ko, c("WT", "KO"))
+lifespan <- udat$dat
+cnnct <- udat$cnnct
+lifespan[1, "text.adj"] <- 3
+```
+
+```{r plot_lifespan, fig.width=2.5, fig.height=3}
+plotU <- function(dat, cnnct, sel=NULL, only.points=FALSE) {
+  if(!is.null(sel)) {
+    dat.sel <- subset(dat, Condition=="WT" & Lifespan==sel)
+    dat.sel$Condition <- factor(dat.sel$Condition, levels=c("WT", "KO"))
+    cnnct.sel <- subset(cnnct, WT==sel)
+  } else {
+    dat.sel <- dat
+    cnnct.sel <- cnnct
+  }
+  dat$Condition <- factor(dat$Condition, levels=c("WT", "KO"))
+  g <- ggplot(dat, aes(Condition, Lifespan)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    labs(x="", y="Lifespan (day)") +
+    scale_colour_manual(values=cbPalette) +
+    geom_point()
+  if(!only.points) {
+    g <- g + geom_segment(data=cnnct.sel, aes(x="KO", xend="WT", y=KO, yend=WT, colour=Colour)) +
+      geom_point() +
+      geom_text(data=dat.sel, aes(x=Condition, y=Lifespan, label=U, hjust=text.adj))
+  }
+  g
+}
+
+g0 <- plotU(lifespan, cnnct, only.points = TRUE)
+g1 <- plotU(lifespan, cnnct, 537)
+g2 <- plotU(lifespan, cnnct)
+g0
+g1
+g2
+
+ggsave(paste0(fig, "lifespan_u_0.png"), plot=g0, device="png", width=2.5, height=3, dpi=300)
+ggsave(paste0(fig, "lifespan_u_1.png"), plot=g1, device="png", width=2.5, height=3, dpi=300)
+ggsave(paste0(fig, "lifespan_u.png"), plot=g2, device="png", width=2.5, height=3, dpi=300)
+```
+
+
+```{r u_plot_data, fig.width=3, fig.height=2}
+P <- lapply(seq(-700, 240, 1), function(dm) {
+  x <- wt - dm
+  y <- ko
+  ux <- sum(countU(x, y))
+  uy <- sum(countU(y, x))
+  u <- min(ux, uy)
+  data.frame(
+    dm = dm,
+    ux = ux,
+    uy = uy,
+    u = u
+  )
+})
+Udist <- do.call(rbind, P)
+
+g <- ggplot(Udist) +
+  theme_classic() +
+  geom_line(aes(dm, ux), colour="blue", size=0.3) +
+  geom_line(aes(dm, uy), colour="darkgreen", size=0.3) +
+  labs(x="Difference of the means", y="U")
+g
+gu <- g + geom_line(aes(dm, u), colour="black", size=1)
+gu
+
+simplePlot <- function(dat, dm) {
+  dat[dat$Condition == "WT", "Lifespan"] <- dat[dat$Condition == "WT", "Lifespan"] - dm
+  ggplot(dat, aes(x=Condition, y=Lifespan)) +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      axis.line = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      panel.border = element_rect(fill=NA)
+    ) +
+    geom_point() +
+    labs(x="", y="")
+}
+
+
+g1 <- simplePlot(lifespan, -800)
+g2 <- simplePlot(lifespan, -350)
+g3 <- simplePlot(lifespan, 300)
+
+g1
+g2
+g3
+
+ggsave(paste0(fig, "U_example.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300) 
+ggsave(paste0(fig, "U_example_withu.png"), plot=gu, device="png", width=3.5, height=3.5, dpi=300) 
+ggsave(paste0(fig, "U_example_1.png"), plot=g1, device="png", width=1.5, height=2, dpi=300) 
+ggsave(paste0(fig, "U_example_2.png"), plot=g2, device="png", width=1.5, height=2, dpi=300)
+ggsave(paste0(fig, "U_example_3.png"), plot=g3, device="png", width=1.5, height=2, dpi=300)
+```
+
+
+```{r generate_u_dist_function}
+generateUdist <- function(nx, ny, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    x <- rnorm(nx)
+    y <- rnorm(ny)
+    ux <- sum(countU(x, y))
+    uy <- sum(countU(y, x))
+    u <- min(ux, uy)
+  })
+  U <- unlist(P)
+}
+
+```
+
+
+```{r generate_u_dist}
+U <- generateUdist(7, 6, 100000)
+```
+
+```{r plot_udist_function}
+plotUdist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
+  Utab <- table(U) / length(U)
+  udat <- data.frame(
+    U = as.numeric(names(Utab)),
+    freq = as.numeric(Utab)
+  )
+  g1 <- ggplot(udat, aes(U, freq)) +
+    theme_classic() +
+    geom_segment(aes(x=U, xend=U, y=0, yend=freq), colour="grey60") +
+    geom_point() +
+    scale_x_continuous(limits=c(0, xmax)) +
+    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
+    labs(x="U", y="Normalized frequency")
+
+  M <- nx * ny / 2
+  S <- sqrt(nx * ny * (nx + ny + 1) / 12)
+
+  x <- seq(0, 50, 0.1)
+  gs <- data.frame(
+    x = x,
+    y = 2*dnorm(x, mean=M, sd=S)
+  )
+  g2 <- g1 +
+    geom_line(data=gs, aes(x, y), colour="red")
+  g2
+
+  xc <- seq(0, u.cut, 0.1)
+  gc <- data.frame(
+    x = c(xc, u.cut, 0),
+    y = c(2*dnorm(xc, M, S), 0, 0)
+  )
+  g3 <- g2 +
+    geom_polygon(data=gc, aes(x, y), colour="red", fill=fill.colour.dark)
+  g3
+
+  list(g1=g1, g2=g2, g3=g3)
+}
+```
+
+
+```{r plot_u_dist, fig.width=3, fig.height=3}
+pu <- plotUdist(U, 7, 6)
+pu$g1
+pu$g2
+pu$g3
+
+ggsave(paste0(fig, "U_dist.png"), plot=pu$g1, device="png", width=3.5, height=3, dpi=300) 
+ggsave(paste0(fig, "U_dist_norm.png"), plot=pu$g2, device="png", width=3.5, height=3, dpi=300) 
+ggsave(paste0(fig, "U_dist_cut.png"), plot=pu$g3, device="png", width=3.5, height=3, dpi=300) 
+```
+
+```{r generate_udist_3_3}
+U33 <- generateUdist(3, 3)
+```
+
+```{r plot_u_dist_3_3, fig.width=3, fig.height=3}
+pu <- plotUdist(U33, 3, 3, xmax=9, ymax=0.40)
+g2 <- pu$g2 + scale_x_continuous(breaks=0:10, limits=c(0,9))
+g2
+
+ggsave(paste0(fig, "U_dist_33_norm.png"), plot=g2, device="png", width=3.5, height=3, dpi=300) 
+```
+
+```{r plot_3_3, fig.width=2, fig.height=3}
+udat33 <- prepareUdata(c(450, 500, 520), c(530, 550, 600), c("WT", "KO"))
+g <- plotU(udat33$dat, udat33$cnnct)
+g
+
+ggsave(paste0(fig, "U_example_33.png"), plot=g, device="png", width=2, height=3, dpi=300) 
+```
+
+```{r t_comparison, fig.width=4, fig.height=3}
+g1 <- plotOneThing(lifespan, what="Lifespan", with.error = TRUE)
+g2 <- plotOneThing(lifespan, what="Rank") + scale_y_continuous(breaks=1:13)
+
+g <- plot_grid(g1, g2, ncol=2)
+g 
+
+ggsave(paste0(fig, "MW_vs_ttest.png"), plot=g, device="png", width=3, height=3, dpi=300)
+```
+
+```{r median_comparison, fig.width=2.5, fig.height=3}
+design <- c(9, 10, 10, 9)
+x <- seq(1, design[1])
+y <- seq(1, design[2]) + max(x)
+x <- c(x, seq(1, design[3]) + max(y))
+y <- c(y, seq(1, design[4]) + max(x))
+medat <- data.frame(
+  X = x,
+  Y = y
+)
+medat <- reshape2::melt(medat, measure.vars=c("X", "Y"))
+
+g <- ggplot(medat, aes(x=variable, y=value)) +
+  theme_classic() +
+  geom_boxplot(aes(fill=variable), outlier.shape = NA) +
+  geom_point() +
+  scale_fill_manual(values=cbPalette) +
+  theme(legend.position = "none") +
+  labs(x="", y="Value")
+
+g
+ggsave(paste0(fig, "MW_median.png"), plot=g, device="png", width=2, height=3, dpi=300)
+```
+
+
+```{r MW_scores, fig.width=4, fig.height=3}
+s1 <- read.table("../data/velos1_peptides_info.txt", sep="\t", header=TRUE, nrows=100)$Score
+s2 <- read.table("../data/velos3_peptides_info.txt", sep="\t", header=TRUE, nrows=100)$Score
+scores <- data.frame(
+  S1 = s1,
+  S2 = s2
+)
+scores <- reshape2::melt(scores, measure.vars=c("S1", "S2"))
+
+wilcox.test(s1, s2, alternative="less", correct=FALSE)
+
+g1 <- ggplot(scores, aes(x=value, y=variable, fill=variable)) +
+  geom_density_ridges(stat="binline", bins=20, scale=0.9) +
+  scale_fill_manual(values=cbPalette) +
+  labs(x="Score", y="") +
+  theme(legend.position = "none") 
+g1
+g2 <- ggplot(scores, aes(x=variable, y=value)) +
+  theme_classic() +
+  geom_boxplot(aes(fill=variable), outlier.shape = NA) +
+  #geom_jitter(width=0.1, height=0, size=0.5) +
+  geom_beeswarm(cex=2, size=1, priority="density") +
+  scale_fill_manual(values=cbPalette) +
+  theme(legend.position = "none") +
+  labs(x="", y="Score")
+g2
+ggsave(paste0(fig, "MW_score_dist.png"), plot=g1, device="png", width=4, height=4, dpi=300)
+ggsave(paste0(fig, "MW_score_box.png"), plot=g2, device="png", width=2.2, height=3.5, dpi=300)
+```
+
+```{r apgar_score}
+control <- c(8, 7, 6, 2, 5, 8, 7, 3)
+new <- c(9, 8, 7, 8, 10, 9, 6)
+
+d <- data.frame(
+  sample = c(rep("Old", length(control)), rep("New", length(new))),
+  score = c(control, new)
+)
+d$sample <- relevel(d$sample, ref="Old")
+
+wilcox.test(control, new, alternative="less")
+
+g <- ggplot(d, aes(x=sample, y=score, fill=sample)) +
+  theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  geom_beeswarm(cex=4, size=2, shape=21) +
+  scale_y_continuous(breaks=0:10, limits=c(0,10.5), expand=c(0,0)) +
+  labs(x=NULL, y="Score")
+g
+
+ggsave(paste0(fig, "APGAR.png"), plot=g, device="png", width=2.5, height=2.5, dpi=300)
+
+```
+
+
+
+```{r paired_data}
+before <- c(21.4, 20.2, 23.5, 17.5, 18.6, 17.0, 18.9, 19.2)
+after <- c(22.6, 20.9, 23.8, 18.0, 18.4, 17.9, 19.3, 19.1)
+```
+
+```{r paired_figure, fig.width=2.5, fig.height=3}
+pairedPlot <- function(before, after, simple=FALSE) {
+  m <- data.frame(
+    type = c(rep("Before", length(before)), rep("After", length(after))),
+    value = c(before, after)
+  )
+  x <- data.frame(Before=before, After=after, sign=sign(before-after))
+  x$sign <- factor(x$sign, levels=c(-1,1))
+
+  m$type <- factor(m$type, levels=c("Before", "After"))
+  laby <- ifelse(simple, "", "Body mass (g)")
+  g <- ggplot(m, aes(type, value)) +
+    theme_classic() +
+    labs(x="", y=laby) +
+    geom_point() +
+    geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) +
+    geom_point() +
+    theme(legend.position = "none") +
+    scale_color_manual(breaks=c(-1,1), values=cbPalette, drop=FALSE)
+  if(simple) {
+    g <- g +
+      scale_y_continuous(expand=c(0,2)) +
+      scale_x_discrete(expand=c(0,0.3)) +
+      theme(
+        legend.position = "none",
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(fill=NA)
+    )
+  }
+  g
+}
+
+g <- pairedPlot(before, after)
+
+ggsave(paste0(fig, "paired_data.png"), plot=g, device="png", width=2.5, height=3.5, dpi=300)
+```
+
+```{r W_function}
+wilcoxW <- function(x, y) {
+  d <- abs(x - y)
+  r <- rank(d)
+  s <- sign(x - y)
+  W <- sum(s * r)
+}
+```
+
+```{r W_data}
+m0 <- mean(after) - mean(before)
+P <- lapply(seq(-1, 1, 0.01), function(dm) {
+  x <- before
+  y <- after - m0 - dm
+  W <- wilcoxW(x, y)
+  data.frame(
+    dm = dm,
+    W = W
+  )
+})
+wdat <- do.call(rbind, P)
+```
+
+```{r W_plot, fig.width=3, fig.height=3}
+g <- ggplot(wdat, aes(dm, W)) +
+  geom_vline(xintercept = 0, colour="grey60") +
+  geom_hline(yintercept = 0, colour="grey60") +
+  geom_line(colour="blue") +
+  theme_classic() +
+  scale_y_continuous(breaks=c(-30,-20,-10,0,10,20,30)) +
+  labs(x="Difference between the means", y="W")
+g
+
+ggsave(paste0(fig, "W_plot.png"), plot=g, device="png", width=3, height=3, dpi=300)
+
+g1 <- pairedPlot(before, after - m0 - 1, simple=TRUE)
+g1   
+g2 <- pairedPlot(before, after - m0 , simple=TRUE)
+g2
+g3 <- pairedPlot(before, after - m0 + 1, simple=TRUE)
+g3
+ 
+ggsave(paste0(fig, "W_plot_1.png"), plot=g1, device="png", width=2, height=2.5, dpi=300)
+ggsave(paste0(fig, "W_plot_2.png"), plot=g2, device="png", width=2, height=2.5, dpi=300)
+ggsave(paste0(fig, "W_plot_3.png"), plot=g3, device="png", width=2, height=2.5, dpi=300)
+```
+
+```{r wilcox_boot_function}
+generateWdist <- function(nx, ny, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    x <- rnorm(nx)
+    y <- rnorm(ny)
+    W <- wilcoxW(x, y)
+  })
+  W <- unlist(P)
+}
+```
+
+```{r plot_wdist_function}
+plotWdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
+  Wtab <- table(W) / length(W)
+  wdat <- data.frame(
+    W = as.numeric(names(Wtab)),
+    freq = as.numeric(Wtab)
+  )
+  g1 <- ggplot(wdat, aes(W, freq)) +
+    theme_classic() +
+    geom_segment(aes(x=W, xend=W, y=0, yend=freq), colour="grey60") +
+    geom_point() +
+    scale_x_continuous(limits=c(-xmax, xmax), breaks=c(-40, -30,-20,-10,0,10,20,30, 40)) +
+    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
+    labs(x="W", y="Normalized frequency")
+
+  M <- 0
+  S <- sqrt(n * (n + 1) * (2*n + 1) / 6)
+
+  x <- seq(-50, 50, 0.1)
+  gs <- data.frame(
+    x = x,
+    y = 2*dnorm(x, mean=M, sd=S)
+  )
+  g2 <- g1 +
+    geom_line(data=gs, aes(x, y), colour="red")
+  g2
+
+  xc1 <- seq(-50, -w.cut, 0.1)
+  gc1 <- data.frame(
+    x = c(xc1, -w.cut, -50),
+    y = c(2*dnorm(xc1, M, S), 0, 0)
+  )
+  
+  xc2 <- seq(w.cut, 50, 0.1)
+  gc2 <- data.frame(
+    x = c(w.cut, xc2, 50),
+    y = c(0, 2*dnorm(xc2, M, S), 0)
+  )
+  g3 <- g2 +
+    geom_polygon(data=gc1, aes(x, y), colour="red", fill=fill.colour.dark) +
+    geom_polygon(data=gc2, aes(x, y), colour="red", fill=fill.colour.dark)
+  g3
+
+  list(g1=g1, g2=g2, g3=g3)
+}
+```
+
+```{r generate_W}
+W <- generateWdist(8, 8, nsim=100000)
+```
+
+```{r wilcox_W_dist, fig.width=3, fig.height=3}
+P <- plotWdist(W, 8)
+P$g1
+P$g2 
+P$g3
+ 
+ggsave(paste0(fig, "W_dist.png"), plot=P$g1, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "W_dist_norm.png"), plot=P$g2, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "W_dist_norm_cut.png"), plot=P$g3, device="png", width=3, height=3, dpi=300)
+```
+
+
+```{r read_4mice_again}
+set.seed(999)
+countries <- c("English", "Scottish", "Welsh", "N.Irish")
+lifespan4 <- read.table("../data/mice_kruskal.txt", sep="\t", header=TRUE)
+lifespan4$Rank <- rank(lifespan4$Lifespan, ties.method="average")
+lifespan4$Country <- factor(lifespan4$Country, levels=countries)
+```
+
+
+```{r plot_mice_box_function}
+plotMiceBox <- function(mice, what="Lifespan", ylab="Lifespan (day)", seed=111, limits=NULL, width=0.15, cex=4, size=2, withbox=TRUE, palette=british.palette) {
+  set.seed(seed)
+  g <- ggplot(mice, aes_string(x="Country", y=what)) +
+    theme_classic() +
+    theme(legend.position = "none")
+  if(withbox) g <- g + geom_boxplot(aes(fill=Country), alpha=0.4, outlier.shape=NA, colour="grey70")
+  g <- g +
+    scale_fill_manual(values=palette) +
+    #geom_jitter(width=width, height=0) +
+    geom_beeswarm(cex=cex, size=size, aes(fill=Country), shape=21, priority="density") +
+    labs(x="", y=ylab)
+  if(!is.null(limits)) g <- g + ylim(limits)
+  g
+}
+
+rankPlot <- function(mice) {
+  mice <- mice %>% group_by(Rank) %>% mutate(idx = row_number(Rank)) %>% as.data.frame
+  labsi <- c(1, seq(5,40,5))
+  labs <- rep("", 40)
+  labs[labsi] <- labsi
+  ggplot(mice, aes(x=Rank, y=idx, fill=Country, shape=Country)) +
+    theme_classic() +
+    geom_point(size=3) +
+    theme(
+      axis.line.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+    ) +
+    scale_fill_manual(values=british.palette) +
+    scale_x_continuous(breaks=1:40, labels=labs) +
+    scale_shape_manual(values=21:24) +
+    labs(x = "Rank", y="")
+}
+```
+
+```{r anova_rank_plot, fig.width=5, fig.height=3}
+g1 <- plotMiceBox(lifespan4) 
+g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank", width=0, cex=3.1)
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+ggsave(paste0(fig, "anova_kruskal.png"), plot=g, device="png", width=5, height=3, dpi=300)
+```
+
+```{r rank_plot_4mice, fig.width=3, fig.height=0.3}
+ls2 <- lifespan 
+ls2$Country <- ls2$Condition
+ls2$Country <- gsub("WT", "English", ls2$Country)
+ls2$Country <- gsub("KO", "Scottish", ls2$Country)
+ls2$Rank <- rank(ls2$Lifespan, ties.method="random")
+g2.1 <- plotMiceBox(ls2, cex=5, size=1.5)
+g2.2 <- plotMiceBox(ls2, size=1.5, what="Rank", ylab="Rank", width=0)
+g0 <- plot_grid(g2.1, g2.2, ncol=2)
+
+g1 <- rankPlot(ls2) 
+g2 <- rankPlot(lifespan4) + scale_y_continuous(expand=c(0,0.6))
+  
+ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3, height=3, dpi=300)
+
+ggsave(paste0(fig, "mice2_rank.png"), plot=g1, device="png", width=3, height=0.7, dpi=300)
+ggsave(paste0(fig, "mice4_rank.png"), plot=g2, device="png", width=5, height=0.95, dpi=300)
+```
+
+```{r get_means_function}
+getMeans <- function(mice, value="Mass", width=0.6) {
+  M <- tapply(mice[, value], mice$Country, mean)
+  L <- tapply(mice$Country, mice$Country, length)
+  mice$grand.mean <- mean(mice[, value])
+  mice$Mean <- M[mice$Country]
+  mice$N <- L[mice$Country]
+  mice$group <- as.integer(mice$Country)
+  mice$n <- unlist(tapply(mice$Country, mice$Country, seq_along))
+  mice$x <- as.integer(mice$Country) + width*(mice$n - mice$N/2 - 1/2) / (mice$N - 1)
+  means <- data.frame(x=as.numeric(seq_along(M)), mean=M, country=names(M))
+  list(mice=mice, means=means)  
+}
+```
+
+
+```{r plot_variance_function}
+plotVariance <- function(mice, means, within=TRUE, width=0.6) {
+  gm <- mice$grand.mean[1]
+  g <- ggplot(mice) + theme_classic()
+  if(within) {
+    g <- g + geom_segment(aes(x=x, xend=x, y=Mean, yend=Rank), colour="grey70")
+  } else {
+    g <- g +
+      geom_line(data=data.frame(x=c(1-width/2,4+width/2), y=c(gm, gm)), aes(x,y), linetype="dotted") +
+      geom_segment(aes(x=x, xend=x, y=grand.mean, yend=Mean), colour="grey70")
+  }
+  g <- g +
+    geom_segment(data=means, aes(x=x-width/2, xend=x+width/2, y=mean, yend=mean, colour=country)) +
+    geom_point(aes(x=x, y=Rank, colour=Country)) +
+    theme(legend.position = "none", axis.ticks.x = element_blank()) +
+    scale_x_continuous(breaks=c(1,2,3,4), labels=levels(mice$Country)) +
+    labs(x="", y="Rank") +
+    scale_colour_manual(values=british.palette)
+  g
+}
+```
+
+```{r variance_between, fig.width=4, fig.height=3}
+m <- getMeans(lifespan4, value="Rank")
+ls4 <- m$mice
+means <- m$means
+
+g <- plotVariance(ls4, means, within=FALSE)
+g
+
+ggsave(paste0(fig, "rank_variance_between.png"), plot=g, device="png", width=3.5, height=3, dpi=300)
+```
+
+```{r kruskal_boot_function}
+generateHdist <- function(n=c(12, 9, 8, 5), nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    L <- lapply(1:length(n), function(k) {
+      data.frame(
+        Country = k,
+        Lifespan = rnorm(n[k])
+      )
+    })
+    d <- do.call(rbind, L)
+    kt <- kruskal.test(Lifespan ~ Country, data=d)
+    kt$statistic
+  })
+  H <- as.numeric(unlist(P))
+}
+```
+
+```{r H_dist}
+H <- generateHdist(nsim=100000) 
+```
+
+```{r chisquare_cut, fig.width=4, fig.height=3}
+kt.chi2 <- as.numeric(kruskal.test(Lifespan ~ Country, data=lifespan4)$statistic)
+x <- seq(kt.chi2, 20, 0.1)
+df <- data.frame(
+  x = c(kt.chi2, x, 20),
+  y = c(0, dchisq(x, 3), 0)
+)
+
+xx <- seq(0,20, 0.02)
+mod <- data.frame(x=xx, y=dchisq(xx, 3))
+
+hdat <- data.frame(H=H)
+g <- ggplot(hdat, aes(x=H, y=..density..)) +
+  theme_classic() +
+  geom_histogram(bins=100, fill=fill.colour.mid) +
+  labs(x=expression(H), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_line(data=mod, aes(x, y)) +
+  geom_polygon(data=df, aes(x, y), colour="blue", fill=fill.colour.dark)
+g
+
+ggsave(paste0(fig, "H_dist_cut.png"), plot=g, device="png", width=3.5, height=3, dpi=300)
+```
+
+
+```{r KS_functions}
+QKS <- function(lambda, eps1=0.0001, eps2=1e-12) {
+  a2 <- -2 * lambda^2
+  fac <- 2
+  probks <- 0
+  termbf <- 0
+  for(j in 1:1000) {
+    term <- fac * exp(a2 * j^2)
+    probks <- probks + term
+    if(abs(term) < eps1 * termbf || abs(term) < eps2 * probks) {
+      return(probks)
+    }
+    fac <- -1 * fac
+    termbf <- abs(term)
+  }
+  return(1)
+}
+
+kolmogorovDist <- function(n1, n2, delta=0.01) {
+  sn <- sqrt(n1 * n2 / (n1 + n2))
+  x <- seq(0, 1, delta)
+  y <- unlist(lapply(x, function(d) {
+    1 - QKS((sn + 0.12 + 0.11/sn) * d)
+  }))
+  n <- length(y)
+  f <- (y[2:n] - y[1:(n-1)]) / delta
+  x <- (x[2:n] + x[1:(n-1)]) / 2
+  
+  data.frame(
+    x = x,
+    f = f
+  )
+}
+```
+
+
+
+```{r read_4mice}
+countries <- c("English", "Scottish", "Welsh", "N.Irish")
+ls4 <- read.table("../data/mice_kruskal.txt", sep="\t", header=TRUE)
+ls4$Country <- factor(ls4$Country, levels=countries)
+
+
+```
+
+
+
+```{r plot_cumsum_function}
+plotCumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmargin=0.1, ymargin=0.05, palette=british.palette) {
+  mn <- min(dat[, what])
+  mx <- max(dat[, what])
+  delta <- mx - mn
+  mn <- mn - xmargin * delta
+  mx <- mx + xmargin * delta
+  
+  dat <- dat %>%
+    mutate(value = !!sym(what)) %>%
+    filter(Country %in% vars) %>%
+    group_by(Country) %>%
+    arrange(value) %>% 
+    mutate(idx = row_number(Country), c=1) %>% 
+    mutate(cumdist = cumsum(c) / n()) %>% 
+    mutate(Group = as.integer(Country))  %>% 
+    mutate(y = -ymargin * Group) %>%
+    as.data.frame()
+  dat2 <- dat %>% 
+    add_row(Country=vars, value=mn, cumdist=0) %>%
+    add_row(Country=vars, value=mx, cumdist=1) %>%
+    arrange(value, cumdist)
+  
+  g <- ggplot(dat2, aes(x=value, y=cumdist, colour=Country)) +
+    theme_classic() +
+    geom_hline(yintercept = 0, colour="grey70") +
+    geom_step() +
+    scale_colour_manual(values=palette) +
+    geom_point(data=dat, aes(x=value, y=y, colour=Country), shape=3, size=2) +
+    scale_y_continuous(breaks=seq(0, 1, 0.2)) +
+    labs(x=xlab, y="Cumulative distribution") +
+    theme(legend.position = "none")
+  g
+}
+```
+
+```{r cumulsum_plot_1}
+g1 <- plotCumsum(ls4, vars="Scottish")
+g1
+ggsave(paste0(fig, "cumulsum1.png"), plot=g1, device="png", width=3.5, height=3, dpi=300)
+```
+
+```{r KS_eng_sco, fig.width=4, fig.height=3}
+countries <- c("English", "Scottish") 
+ks.test(ls4[ls4$Country==countries[1], "Lifespan"], ls4[ls4$Country==countries[2], "Lifespan"])
+
+g1 <- plotMiceBox(subset(ls4, Country %in% countries), cex=5, size=1.8)
+g2 <- plotCumsum(ls4, vars=countries)
+g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+g
+
+ggsave(paste0(fig, "ks_eng_sco.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+```
+
+
+
+```{r KS_eng_nir, fig.width=4, fig.height=3}
+countries <- c("English", "N.Irish") 
+ks.test(ls4[ls4$Country==countries[1], "Lifespan"], ls4[ls4$Country==countries[2], "Lifespan"])
+
+g1 <- plotMiceBox(subset(ls4, Country %in% countries), cex=5, size=1.8)
+g2 <- plotCumsum(ls4, vars=countries)
+g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+g
+
+ggsave(paste0(fig, "ks_eng_nir.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+```
+
+```{r generate_mice_function}
+generateMice <- function(nx, ny, what="Lifespan", Mx=500, My=500, Sx=50, Sy=50, countries=c("English", "Scottish")) {
+  x <- rnorm(nx, Mx, Sx)
+  y <- rnorm(ny, My, Sy)
+  d <- data.frame(
+    v = c(x, y),
+    Country = c(rep(countries[1], nx), rep(countries[2], ny))
+  )
+  colnames(d)[1] <- what
+  d$Country <- factor(d$Country, levels=countries)
+  d
+}
+```
+
+```{r ks_boot_example}
+countries <- c("English", "Scottish")
+ls.gen <- generateMice(12, 9)
+ks.test(ls.gen[ls.gen$Country==countries[1], "Lifespan"], ls.gen[ls.gen$Country==countries[2], "Lifespan"])
+
+g1 <- plotMiceBox(ls.gen)
+g2 <- plotCumsum(ls.gen, vars=countries)
+
+ggsave(paste0(fig, "ks_gen_example_box.png"), plot=g1, device="png", width=2, height=2.5, dpi=300)
+ggsave(paste0(fig, "ks_gen_example_cum.png"), plot=g2, device="png", width=3, height=2.5, dpi=300)
+```
+
+```{r ks_boot_function}
+generateDdist <- function(nx, ny, nsim=100000) {
+  P <- lapply(1:nsim, function(i) {
+    L <- lapply(1:length(n), function(k) {
+      generateMice(nx, ny)
+    })
+    d <- do.call(rbind, L)
+    kt <- ks.test(d[d$Country=="English", "Lifespan"], d[d$Country=="Scottish", "Lifespan"])
+    kt$statistic
+  })
+  D <- as.numeric(unlist(P))
+}
+```
+
+
+```{r generate_ks_dist}
+set.seed(123)
+D <- generateDdist(12, 9, nsim=10000)
+```
+
+
+```{r plot_ddist_function}
+dks <- function(x, n) {
+  p <- unlist(lapply(x, function(d) {
+    pkolmim(d, n)
+  }))
+  delta <- x[2] - x[1]
+  l <- length(x)
+  f <- (p[2:l] - p[1:(l-1)]) / delta
+  xf <- (x[2:l] + x[1:(l-1)]) / 2
+  data.frame(
+    x = xf,
+    f = f
+  )
+}
+
+plotDdist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
+  Dtab <- table(D) / length(D)
+  ddat <- data.frame(
+    D = as.numeric(names(Dtab)),
+    freq = as.numeric(Dtab)
+  )
+  delta <- min(ddat$D[2:nrow(ddat)] - ddat$D[1:(nrow(ddat)-1)])
+  ddat$freq <- ddat$freq / delta
+  
+  g1 <- ggplot(ddat, aes(D, freq)) +
+    theme_classic() +
+    geom_segment(aes(x=D, xend=D, y=0, yend=freq), colour="grey60") +
+    geom_point() +
+    scale_x_continuous(limits=c(0, 1)) +
+    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
+    labs(x="D", y="Normalized frequency")
+ 
+  ne <- nx * ny / (nx + ny)
+  
+  #gs <- dks(x, ne)
+  gs <- kolmogorovDist(nx, ny)
+ 
+  g2 <- g1 +
+    geom_line(data=gs, aes(x, f), colour="red")
+  g2
+
+  xc <- seq(d.cut, 1, 0.001)
+  ff <- kolmogorovDist(xc, ne)
+  gc <- data.frame(
+    x = c(d.cut, ff$x, 1),
+    y = c(0, ff$f, 0)
+  )
+  g3 <- g2 +
+    geom_polygon(data=gc, aes(x, y), colour="red", fill=fill.colour.dark)
+  g3
+
+  list(g1=g1, g2=g2, g3=g3)
+}
+```
+
+
+```{r ks_dist_plot}
+ksp <- plotDdist(D, 12, 9, d.cut=0.42)
+ksp$g1
+ksp$g2
+ksp$g3
+
+ggsave(paste0(fig, "ks_dist.png"), plot=ksp$g1, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "ks_dist_theor.png"), plot=ksp$g2, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "ks_dist_theor_cut.png"), plot=ksp$g3, device="png", width=3, height=2.5, dpi=300)
+
+```
+
+
+
+
+```{r KS_location_shape, fig.width=4, fig.height=3}
+set.seed(747) 
+countries <- c("CTRL", "TREAT")
+ls.gen <- generateMice(12, 12, Mx=100, My=110, Sx=10, Sy=10, what="Value", countries=countries)
+ks.test(ls.gen[ls.gen$Country==countries[1], "Value"], ls.gen[ls.gen$Country==countries[2], "Value"])
+g1 <- plotMiceBox(ls.gen, what="Value", ylab="Value", palette=cbPalette, cex=5, size=1.8)
+g2 <- plotCumsum(ls.gen, vars=countries, what="Value", xlab="Value", palette = cbPalette)
+g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+g
+
+ggsave(paste0(fig, "ks_location.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+
+set.seed(747)
+ls.gen2 <- generateMice(16, 16, what="Value", Mx=100, My=100, Sx=2, Sy=10, countries=countries)
+ks.test(ls.gen2[ls.gen2$Country==countries[1], "Value"], ls.gen2[ls.gen2$Country==countries[2], "Value"])
+g1 <- plotMiceBox(ls.gen2, what="Value", ylab="Value", palette=cbPalette, cex=5, size=1.8)
+g2 <- plotCumsum(ls.gen2, vars=countries, what="Value", xlab="Value", palette = cbPalette)
+g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+g
+
+ggsave(paste0(fig, "ks_shape.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+```
+
+
+```{r generate_ks_dist_33}
+set.seed(123)
+D33 <- generateDdist(3, 3, nsim=10000)
+```
+
+```{r ks_dist_plot_33}
+ksp <- plotDdist(D33, 3, 3, d.cut=0.42, ymax=2.5) 
+g <- ksp$g2 +
+  scale_x_continuous(breaks=c(0, 0.2, 0.4, 0.6, 0.8, 1))
+
+ggsave(paste0(fig, "ks_dist_33.png"), plot=g, device="png", width=3, height=2.5, dpi=300)
+
+```

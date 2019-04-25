@@ -34,7 +34,7 @@ pre code, pre, code {
 ```
 
 
-```{r flg_expression}
+```{r flg_expression, fig.width=2.1, fig.height=3.5}
 set.seed(111)
 ctrl <- c(41723, 1000*rnorm(29, 32, 8))
 trt <- c(19786, 1000*rnorm(29, 28, 6))
@@ -46,12 +46,14 @@ dat <- data.frame(
   Value = c(ctrl, trt)
 )
 t.test(Value ~ Type, data=dat)
-g <- ggplot(dat, aes(x=Type, y=Value/1000)) +
+g <- ggplot(dat, aes(x=Type, y=Value/1000, fill=Type)) +
   theme_classic() +
-  theme(legend.position = "none") +
-  geom_boxplot(aes(fill=Type), alpha=0.5, outlier.shape = NA) +
+  theme(
+    legend.position = "none"
+  ) +
+  geom_boxplot(alpha=0.3, outlier.shape = NA) +
   scale_fill_manual(values=cbPalette) +
-  geom_jitter(width=0.15, height=0) +
+  geom_beeswarm(cex=3, size=1, shape=21) +
   labs(x="", y="Intensity (x1000)")
 g
 
@@ -99,7 +101,7 @@ g <- ggplot(dist, aes(x, y)) +
   labs(x = "k", y = "P(X = k)")
 g
 
-ggsave(paste0(fig, "pdist_discrete.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300) 
+ggsave(paste0(fig, "pdist_discrete.png"), plot=g, device="png", width=3, height=2.2, dpi=300) 
 ```
 
 ```{r geom_cut_function}
@@ -129,12 +131,12 @@ g <- ggplot() +
   geom_line(data=dchi2, aes(x, y), colour="black") +
   labs(x="x", y="f(x)") +
   scale_x_continuous(limits=c(0, 25), expand=c(0,0)) +
-  scale_y_continuous(limits=c(0, max(dchi2$y) * 1.03), expand=c(0,0)) +
+  scale_y_continuous(limits=c(0, max(dchi2$y) * 1.05), expand=c(0,0)) +
   #geom_polygon(data=df, aes(x, y), colour="black", fill=fill.colour.dark)
   geom_cut(chi2cut, 25, dchisq, dof)
 g
 
-ggsave(paste0(fig, "pdist_continuous.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+ggsave(paste0(fig, "pdist_continuous.png"), plot=g, device="png", width=3, height=2.2, dpi=300)
 ```
 
 
@@ -175,8 +177,8 @@ g1
 g2
 
 
-ggsave(paste0(fig, "normal_example_1.png"), plot=g1, device="png", width=3.5, height=3, dpi=300)
-ggsave(paste0(fig, "normal_example_2.png"), plot=g2, device="png", width=3.5, height=3, dpi=300)
+ggsave(paste0(fig, "normal_example_1.png"), plot=g1, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "normal_example_2.png"), plot=g2, device="png", width=3, height=2.5, dpi=300)
 ```
 
 ```{r baseball_height}
@@ -261,8 +263,8 @@ d <- data.frame(plate=seq_along(p), cnt = p)
 
 g1 <- ggplot(d, aes(plate, cnt)) +
   theme_classic() +
-  geom_segment(aes(x=plate, xend=plate, y=cnt, yend=0), colour="grey80") +
-  geom_point(shape=21, fill="white") +
+  #geom_segment(aes(x=plate, xend=plate, y=cnt, yend=0), colour="grey80") +
+  geom_point(shape=22, fill=fill.colour) +
   scale_x_continuous(breaks=c(1,5,10,15,20)) +
   scale_y_continuous(expand=c(0,0), limits=c(0, max(p) * 1.05), breaks=2*1:10) +
   labs(x="Plate", y="Count")
@@ -388,4 +390,57 @@ g3
 ggsave(paste0(fig, "binomial_example.png"), plot=g1, device="png", width=4, height=3, dpi=300)
 ggsave(paste0(fig, "binomial_example_normal.png"), plot=g2, device="png", width=4, height=3, dpi=300)
 ggsave(paste0(fig, "binomial_example_poisson.png"), plot=g3, device="png", width=4, height=3, dpi=300)
+```
+
+```{r exercise}
+set.seed(10)
+dPlot <- function(x) {
+  ggplot(data.frame(x=1, y=x), aes(x, y)) +
+    theme_classic() +
+    theme(
+      axis.title.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank()
+    ) +
+    scale_x_continuous(expand=c(0,0), limits=c(0.5, 1.5)) +
+    geom_beeswarm(cex=1, size=0.7, priority="density") +
+    labs(x=NULL, y=NULL)
+}
+
+a <- 5
+b <- 15
+
+m <- (a + b) / 2
+v <- (1/12) * (b - a)^2
+mu <- log(m / sqrt(1 + v/m^2))
+sig <- sqrt(log(1 + v/m^2))
+
+g1 <- dPlot(runif(120, min=a, max=b))
+g2 <- dPlot(exp(rnorm(100, mean=mu, sd=sig)))
+g3 <- dPlot(rpois(60, lambda=4))
+g4 <- dPlot(rnorm(90, mean=100, sd=10))
+g5 <- dPlot(rpois(90, lambda=100))
+
+g <- plot_grid(g1, g2, g3, g4, g5, nrow=1)
+
+ggsave(paste0(fig, "exercise.png"), plot=g, device="png", width=7, height=4, dpi=300)
+
+```
+
+
+```{r r_functions}
+theme.d <- theme(
+  axis.title = element_blank(),
+  axis.ticks = element_blank(),
+  axis.text = element_blank(),
+  axis.line.y = element_blank()
+)
+
+g1 <- plotFun(dnorm, x.grid=seq(-4, 4, 0.01), cut.up = 1.7) +
+  theme.d
+ggsave(paste0(fig, "dnorm.png"), plot=g1, device="png", width=2, height=1.4, dpi=300)
+
+g2 <- plotFun(dnorm, x.grid=seq(-4, 4, 0.01), cut.lo = -qnorm(0.975), cut.up = qnorm(0.975)) +
+  theme.d
+ggsave(paste0(fig, "dnorm2.png"), plot=g2, device="png", width=2, height=1.4, dpi=300)
 ```

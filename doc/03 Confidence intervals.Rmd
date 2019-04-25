@@ -182,6 +182,24 @@ ggsave(paste0(fig, "sampling_distribution.png"), plot=g, device="png", width=3.5
 ```
 
 
+```{r r_functions}
+theme.d <- theme(
+  axis.title = element_blank(),
+  axis.ticks = element_blank(),
+  axis.text = element_blank(),
+  axis.line.y = element_blank()
+)
+
+q <- qt(0.975, 6)
+g1 <- plotFun(dt, df=6, x.grid=seq(-5, 5, 0.01), cut.up = q) +
+  theme.d
+ggsave(paste0(fig, "dt.png"), plot=g1, device="png", width=2, height=1.4, dpi=300)
+
+g2 <- plotFun(dt, df=6, x.grid=seq(-5, 5, 0.01), cut.up = q, cut.lo = -q) +
+  theme.d
+ggsave(paste0(fig, "dt2.png"), plot=g2, device="png", width=2, height=1.4, dpi=300)
+```
+
 ```{r ci_vs_se}
 set.seed(1112)
 
@@ -244,15 +262,19 @@ cPlot <- function(x, y, ylab, yintercept, ylim=NULL, ...) {
 }
 
 x <- 2:30
-g1 <- cPlot(x=x, y=qt(0.975, x-1), "t*", qnorm(0.975), ylim=c(0,13), breaks=seq(2,14,2))
+g1 <- cPlot(x=x, y=qt(0.975, x-1), expression(t[c]), qnorm(0.975), ylim=c(0,13), breaks=seq(2,14,2))
 g2 <- cPlot(x=x, y=1 - 2*pt(-1, x-1), "Confidence of SE", 1 - 2*pnorm(-1))
 g <- plot_grid(g1, g2, ncol=1, align="v")
 g
 
-ggsave(paste0(fig, "se_and_ci.png"), plot=g, device="png", width=4, height=5, dpi=300)
+ggsave(paste0(fig, "se_and_ci.png"), plot=g, device="png", width=3.2, height=4, dpi=300)
 
 ```
 
+```{r example_ci}
+d <- c(16.8, 21.8, 29.2, 23.3, 19.5, 18.2, 26.3)
+t.test(d)
+```
 
 ```{r exercise_ci}
 d <- data.frame(

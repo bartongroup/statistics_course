@@ -1,0 +1,183 @@
+---
+title: "Statistical hypothesis testing"
+output:
+  html_document:
+    css: tabbed_notebook.css
+params: 
+  output_dir: "../output"
+---
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "06_hypothesis_testing"
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r generate_mouse_sco_eng, eval=FALSE}
+set.seed(666)
+repeat{
+  eng <- round(rnorm(12, 19, 5), 1)
+  if(abs(mean(eng) - 19) < 1e-3 & abs(sd(eng) - 5) < 1 & abs(median(eng) - 19) < 0.1) break
+}
+repeat{
+  sco <- round(rnorm(9, 24, 5), 1)
+  if(abs(mean(sco) - 24) < 1e-3 & abs(sd(sco) - 5) < 1 & abs(median(sco) - 24) < 0.1) break
+}
+save(eng, sco, file="uk_mice.RData")
+```
+
+```{r read_mice_data}
+mice <- read.table("../data/mice_2samples.txt", header=TRUE)
+```
+
+
+```{r eng_sco_mice, fig.width=2, fig.height=3}
+set.seed(111)
+g <- ggplot(mice, aes(x=Country, y=Mass)) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  geom_boxplot(aes(fill=Country), alpha=0.5, colour="grey50", outlier.shape = NA) +
+  scale_fill_manual(values=british.palette) +
+  #geom_jitter(width=0.15, height=0) +
+  geom_beeswarm(cex=2.5, size=1) +
+  labs(x="", y="Body mass (g)")
+g
+
+ggsave(paste0(fig, "mouse_eng_sco.png"), plot=g, device="png", width=2.1, height=3.5, dpi=300) 
+```
+
+```{r generate_mouse_delta}
+set.seed(13)
+mouse <- lapply(1:1000000, function(i) {
+  eng <- rnorm(12, 20, 5)
+  sco <- rnorm(9, 20, 5)
+  dm <- mean(sco) - mean(eng)
+})
+mouse <- unlist(mouse)
+```
+
+
+```{r fig_mouse_null, fig.width=4, fig.height=3}
+df <- data.frame(m = mouse)
+brks <- seq(-10, 10, 0.1)
+
+dst <- ggplot(df, aes(x=m, y=..density..)) +
+  theme_dist +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  geom_histogram(breaks=brks, fill=fill.colour) +
+  labs(x="Body mass difference (g)", y="Normalized frequency")
+g <- dst + geom_outline(mouse, brks, size=0.3)
+g
+
+ggsave(paste0(fig, "mouse_null.png"), plot=g, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "mouse_null_medium.png"), plot=g, device="png", width=3, height=2.25, dpi=300)
+```
+
+```{r fig_mouse_null_cut, fig.width=4, fig.height=3}
+df5 <- df[df$m > 5,, drop=FALSE]
+norm.fac <- nrow(df5) / nrow(df)
+g <- dst +
+  geom_histogram(data=df5, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac)) +
+  geom_outline(mouse, brks, size=0.3)
+g
+
+ggsave(paste0(fig, "mouse_null_cut.png"), plot=g, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "mouse_null_cut_medium.png"), plot=g, device="png", width=3, height=2.25, dpi=300)
+```
+
+```{r fig_mouse_null_cut_small, fig.width=4, fig.height=3}
+g <- dst +
+  geom_histogram(data=df5, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac)) +
+  geom_outline(mouse, brks, size=0.3) +
+  theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  labs(y="")
+g
+
+ggsave(paste0(fig, "mouse_null_cut_small.png"), plot=g, device="png", width=2, height=2, dpi=300)
+```
+
+
+```{r hyper_20_16, fig.width=3.2, fig.height=2}
+white.drawn <- 0:10
+df <- data.frame(
+  k = factor(white.drawn, levels=white.drawn),
+  p = dhyper(white.drawn, 20, 16, 10)
+)
+
+brks <- as.character(white.drawn)
+hyp <- ggplot(df, aes(x=k, y=p)) +
+  theme_dist +
+  scale_x_discrete(breaks=brks, labels=brks) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(df$p) * 1.05)) +
+  geom_col(fill=fill.colour, colour="black") +
+  labs(x="Number of white balls drawn", y="Probability")
+hyp
+
+ggsave(paste0(fig, "hyper_20_16.png"), plot=hyp, device="png", width=3.2, height=2, dpi=300)
+
+hyp8 <- hyp +
+  geom_col(data=df[9:11, ], fill=fill.colour.dark, colour="black")
+hyp8
+ggsave(paste0(fig, "hyper_20_16_8ormore.png"), plot=hyp8, device="png", width=3.2, height=2, dpi=300)
+
+hyp2 <- hyp +
+  geom_col(data=df[c(1:4, 9:11), ], fill=fill.colour.dark, colour="black")
+hyp2
+ggsave(paste0(fig, "hyper_20_16_2side.png"), plot=hyp2, device="png", width=3.2, height=2, dpi=300)
+
+```
+
+
+```{r bristol, fig.width=4, fig.height=3}
+tea.first <- 0:4
+df <- data.frame(
+  k = factor(tea.first, levels=tea.first),
+  p = dhyper(tea.first, 4, 4, 4)
+)
+
+brks <- as.character(tea.first)
+hyp <- ggplot(df, aes(x=k, y=p)) +
+  theme_dist +
+  scale_x_discrete(breaks=brks, labels=brks) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(df$p) * 1.05)) +
+  geom_col(fill=fill.colour, colour="black") +
+  labs(x="Number of correct answers", y="Probability")
+hyp <- hyp + geom_col(data=df[4:5, ], fill=fill.colour.dark, colour="black")
+hyp
+
+ggsave(paste0(fig, "tea_tasting.png"), plot=hyp, device="png", width=3.2, height=2, dpi=300)
+```
+
+
+
+```{r enrichment, fig.width=3.2, fig.height=2}
+
+```
+

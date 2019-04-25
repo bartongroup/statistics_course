@@ -1,0 +1,356 @@
+---
+title: "Contingency tables"
+output:
+  html_document:
+    css: tabbed_notebook.css
+params: 
+  output_dir: "../output"
+---
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "07_contingency_tables"
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+
+```{r pipetting_data}
+pip <- c(39, 21, 23, 30, 28)
+E <- mean(pip)
+S <- sqrt(E)
+pip.df <- data.frame(
+  plate=seq_along(pip),
+  obs = pip,
+  lo = pip - S,
+  up = pip + S,
+  exp = E,
+  err = S
+)
+```
+
+```{r pipetting_uniform, fig.width=4, fig.height=3}
+plotPip <- function(x) {
+  df <- data.frame(x=seq_along(x), y=x)
+  ggplot(df, aes(x, y)) +
+    theme_dist +
+    geom_col(fill=fill.colour.mid, colour=bar.outline, width=0.8) +
+    labs(x="Plate", y="Colony count") +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y * 1.05)))
+}
+
+g1 <- plotPip(c(38, 32, 41, 35, 37))
+g2 <- plotPip(c(12, 41, 64, 28, 19))
+g1
+g2
+
+ggsave(paste0(fig, "pipetting_uniform.png"), plot=g1, device="png", width=3.5, height=2.5, dpi=300) 
+ggsave(paste0(fig, "pipetting_nonuniform.png"), plot=g2, device="png", width=3.5, height=2.5, dpi=300) 
+```
+
+```{r pipetting_plot, fig.width=3, fig.height=2.5}
+g1 <- ggplot(pip.df, aes(x=plate, y=pip)) +
+  theme_classic() +
+  theme(
+    plot.margin = margin(b = 0, l = 6, t = 3, r = 5),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank()
+  ) +
+  geom_hline(yintercept = mean(pip), colour="red") +
+  geom_errorbar(aes(ymin = lo, ymax = up), width=0.2) +
+  geom_point(shape=21, size=3, fill="white") +
+  scale_x_continuous(expand=c(0,0), limits=c(0.7, 5.3)) +
+  labs(x=NULL, y="Count")
+
+  g2 <- ggplot(pip.df, aes(x=plate, y=(obs - exp) / err)) +
+    theme_classic() +
+    theme(
+      plot.margin = margin(t = 0, l = 6, r = 5)
+    ) +
+    geom_hline(yintercept = 0, colour="red") +
+    geom_segment(aes(xend=plate, yend = 0), colour="grey70") +
+    geom_point(shape=21, size=2, fill="white") +
+    scale_x_continuous(expand=c(0,0), limits=c(0.7, 5.3)) +
+    scale_y_continuous(expand=c(0,0), limits=c(-2.5, 2.5)) +
+    labs(x="Plate", y="Residual")
+g <- plot_grid(g1, g2, align="v", ncol=1, rel_heights = c(2, 1))
+g
+ 
+ggsave(paste0(fig, "pipetting.png"), plot=g, device="png", width=3.8, height=2.5, dpi=300) 
+```
+
+
+```{r poisson_example, fig.width=3, fig.height=2.5}
+df <- data.frame(
+  x = 0:12,
+  y = dpois(0:12, lambda=3.5)
+)
+
+g <- ggplot(df, aes(x, y)) +
+  theme_dist +
+  geom_col(fill=fill.colour.mid, colour=bar.outline, width=0.8) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y) * 1.05)) +
+  labs(x="Count", y="Probability")
+g
+ 
+ggsave(paste0(fig, "poisson.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+
+```{r pipetting_numbers}
+pip.df$chi <- (pip.df$obs - pip.df$exp) / sqrt(pip.df$exp)
+myKable(t(pip.df), digits=2, row.names=TRUE)
+chi2 <- sum(pip.df$chi^2)
+chisq.test(t(pip.df$obs))
+```
+
+```{r generate_pipetting_function}
+nunif <- function(nbin, ntot) {
+  n <- floor(runif(ntot, min=1, max=nbin+1-1e-16))
+  sim <- as.integer(table(n))
+}
+
+generatePipetting <- function(nbin, ntot, nrow) {
+  ex <- rep(ntot/nbin, nbin)
+  P <- lapply(1:nrow, function(i) {
+    r <- nunif(nbin, ntot)
+    (r - ex) / sqrt(ex)
+  })
+  df <- do.call(rbind, P)
+} 
+```
+
+```{r generate_pippeting}
+nbin <- length(pip)
+ntot <- sum(pip)
+nsim <- 100000
+nbatch <- 10
+P <- mclapply(1:nbatch, function(i) {
+  generatePipetting(nbin, ntot, nsim)
+}, mc.cores=4)
+simpip <- do.call(rbind, P) 
+```
+
+```{r sim_pippeting, fig.width=4, fig.height=3}
+m <- reshape2::melt(simpip, varnames=c("sim", "bin"))
+x <- seq(-4, 4, 0.05)
+pexp <- data.frame(
+  x=x,
+  y=dnorm(x)
+)
+
+brks <- unique(sort(m$value))
+brks <- brks + 0.5 * (brks[2] - brks[1])
+g <- ggplot(m, aes(x=value, y=..density..)) +
+  theme_dist +
+  geom_histogram(breaks=brks, fill=fill.colour.mid) +
+  facet_grid(. ~ bin) +
+  geom_line(data=pexp, aes(x, y), colour="blue") +
+  labs(x=expression(chi), y="Density") +
+  theme(strip.background = element_blank(), strip.text = element_blank()) +
+  scale_x_continuous(limits=c(-3, 3)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 0.46))
+g
+
+ggsave(paste0(fig, "pipetting_sim.png"), plot=g, device="png", width=5, height=2, dpi=300)
+```
+
+```{r chisq_example, fig.width=4, fig.height=3}
+P <- lapply(c(3,4,5,8,10), function(dof) {
+  x <- seq(0, 30, 0.1)
+  y <- dchisq(x, dof)
+  dchi2 <- data.frame(dof=dof, x=x, y=y)
+})
+dc <- do.call(rbind, P)
+dc$dof <- as.factor(dc$dof)
+
+g <- ggplot(dc, aes(x=x, y=y, group=dof, colour=dof)) +
+  theme_dist +
+  geom_line() +
+  scale_colour_manual(values=cbPalette) +
+  labs(x=expression(chi^2), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0))
+g
+
+ggsave(paste0(fig, "chisq_dist.png"), plot=g, device="png", width=4, height=3, dpi=300)
+```
+
+
+```{r pipetting_chisquare, fig.width=4, fig.height=3}
+chi2 <- apply(simpip, 1, function(v) {
+  sum(v^2)
+})
+df <- data.frame(x=chi2)
+x <- seq(0, 30, 0.1)
+y <- dchisq(x, ncol(simpip) - 1)
+dchi2 <- data.frame(x=x, y=y)
+
+brks <- seq(0, 20, 0.5)
+g <- ggplot(df, aes(x=x, y=..density..)) +
+  theme_dist +
+  geom_histogram(breaks=brks, fill=fill.colour.mid) +
+  geom_line(data=dchi2, aes(x, y), colour="blue") +
+  labs(x=expression(chi^2), y="Density") +
+  scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0))
+g
+
+ggsave(paste0(fig, "chi2_dist.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r chisquare_cut, fig.width=4, fig.height=3}
+chi2pip <- chisq.test(pip)$statistic
+g <- plotFun(dchisq, df=length(pip)-1, x.grid = seq(0, 20, 0.1), cut.up = chi2pip, name=expression(chi^2))
+g
+
+ggsave(paste0(fig, "chi2_dist_cut.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r geissler_data}
+geissler <- data.frame(
+  girls = 0:12,
+  boys = 12:0,
+  count = c(7, 45, 181, 478, 829, 1112, 1343, 1033, 670, 286, 104, 24, 3)
+)
+tot <- sum(geissler$count)
+n <- max(geissler$girls)
+p <- sum(geissler$girls * geissler$count) / (n * tot)
+geissler$binom <- dbinom(0:n, n, p) * tot
+geissler$chi <- (geissler$count - geissler$binom) / sqrt(geissler$binom)
+```
+
+
+```{r geissler_plot_function} 
+geisslerPlot <- function(geissler, with.binomial=FALSE) {
+  g <- ggplot()
+  n <- max(geissler$girls)
+  
+  # binomial has to go at the bottom
+  if(with.binomial) {
+    g <- g + geom_col(data=geissler, aes(x=girls, y=binom), fill=fill.colour.mid, colour=bar.outline, width=0.8)
+  }
+  
+  # main plot
+  g <- g +
+    theme_dist +
+    theme(axis.text = element_text(size=12)) +
+    geom_segment(data=geissler, aes(x=girls, xend=girls, y=0, yend=count), colour=bar.outline) +
+    geom_point(data=geissler, aes(x=girls, y=count)) +
+    labs(x="Girls", y="Count") +
+    scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.1, 12.1)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(geissler$count) * 1.05), breaks=c(500,1000))
+  
+  # residual plot
+  if(with.binomial) {
+    g <- g + 
+      theme(
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.margin = margin(l=3, r=2, b=0)
+      )
+    g1 <- ggplot(geissler) +
+      theme_dist +
+      theme(axis.text = element_text(size=12)) +
+      geom_segment(aes(x=girls, xend=girls, y=0, yend=chi), colour=bar.outline) +
+      geom_point(data=geissler, aes(x=girls, y=chi)) +
+      labs(x="Girls", y=expression(chi)) +
+      scale_x_continuous(breaks=0:n, labels=as.character(0:n), limits=c(-0.1, 12.1)) +
+      scale_y_continuous(limits=c(-5,5), breaks=c(-5,0,5)) +
+      theme(plot.margin = margin(t=-1)) +
+      geom_hline(yintercept = 0, colour="grey60")
+    return(plot_grid(g, g1, ncol=1, align="v", rel_heights = c(3, 1)))
+  } else {
+    return(g)
+  }
+}
+```
+
+
+```{r geissler_plot, fig.width=4, fig.height=3}
+g1 <- geisslerPlot(geissler)
+g2 <- geisslerPlot(geissler, with.binomial = TRUE)
+g1
+g2 
+ggsave(paste0(fig, "geissler.png"), plot=g1, device="png", width=4, height=3.5, dpi=300)
+ggsave(paste0(fig, "geissler_binom.png"), plot=g2, device="png", width=4, height=4, dpi=300)
+```
+
+```{r binomial_example, fig.width=3, fig.height=2.5}
+df <- data.frame(
+  x = 0:8,
+  y = dbinom(0:8, size=8, prob=0.5)
+)
+
+g <- ggplot(df, aes(x, y)) +
+  theme_dist +
+  geom_col(fill=fill.colour.mid, colour=bar.outline, width=0.8) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(df$y) * 1.05)) +
+  labs(x="Number of heads", y="Probability")
+g
+ 
+ggsave(paste0(fig, "binom_8.png"), plot=g, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+```{r flow_cytometry_data}
+flow.cyt <- matrix(c(50, 61, 78, 43, 172, 175, 162, 178, 55, 45, 47, 59), ncol=4, byrow = TRUE)
+colnames(flow.cyt) <- c("WT", "KO1", "KO2", "KO3")
+rownames(flow.cyt) <- c("G1", "S", "G2")
+flow.prop <- t(t(flow.cyt) / colSums(flow.cyt))
+flow.err <- flow.prop * (1 - flow.prop)
+flow.err <- sqrt(t(t(flow.err) / colSums(flow.cyt)))
+
+mflow.prop <- reshape2::melt(flow.prop, varnames=c("cycle", "condition"), value.name="proportion")
+mflow.err <- reshape2::melt(flow.err, varnames=c("cycle", "condition"))
+mflow.prop$error <- mflow.err$value
+```
+
+```{r flow_cytometry_plot, fig.width=4, fig.height=3}
+txt <- data.frame(
+  condition = rep("WT", 3),
+  cycle = c("G1", "S", "G2"),
+  proportion = rep(0.03, 3)
+)
+txt$cycle <- factor(txt$cycle, levels=txt$cycle)
+
+g <- ggplot(mflow.prop, aes(x=condition, y=proportion, group=cycle)) +
+  geom_col(aes(fill=cycle), colour=bar.outline, position="dodge") +
+  geom_errorbar(aes(x=condition, ymin=proportion-error, ymax=proportion+error), width=0.2, position=position_dodge(0.9)) +
+  scale_fill_manual(values=cbPalette) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(flow.prop) * 1.05)) +
+  labs(x="Condition", y="Proportion", fill="Cell cycle") +
+  theme(legend.position = "none") +
+  geom_text(data=txt, aes(label=cycle), position=position_dodge(0.9), size=3.5)
+g
+
+ggsave(paste0(fig, "flow_cytometry.png"), plot=g, device="png", width=4, height=3, dpi=300)
+```
+

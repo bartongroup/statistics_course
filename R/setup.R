@@ -1,5 +1,7 @@
 library(ggplot2)
 library(gganimate)
+library(ggbeeswarm)
+library(lemon)
 library(knitr)
 library(kableExtra)
 library(gridExtra)
@@ -30,12 +32,14 @@ myKable <- function(df, row.names=FALSE, col.names=NA, digits=2, bootstrap="cond
   kable(df, format="html", row.names=row.names, col.names=col.names, digits=digits) %>% kable_styling(bootstrap_options=bootstrap, full_width=FALSE, position="left", font_size=12)
 }
 
-geom_outline <- function(d, breaks, ...) {
+geom_outline <- function(d, breaks, ..., y.value="density") {
   bins <- breaks[2] - breaks[1]
   m <- length(d)
   x <- breaks[-1] - bins
   y <- as.numeric(table(cut(d, breaks, right=TRUE)))
-  y <- y / (bins * sum(y))
+  if(y.value == "density") {
+    y <- y / (bins * sum(y))
+  }
   
   n <- length(x)
   st <- data.frame(
@@ -46,10 +50,12 @@ geom_outline <- function(d, breaks, ...) {
 }
 
 plotOneDist <- function(d, name, title, limits, fun=NULL, ..., bins=100, f.bins=100,
-                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50") {
+                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50",
+                        fill=fill.colour.mid) {
   brks <- seq(limits[1], limits[2], length.out = bins)
   g <- ggplot(data.frame(d=d), aes(x=d, y=..density..)) +
-    geom_histogram(breaks=brks, fill=fill.colour.mid) +
+    theme_classic() +
+    geom_histogram(breaks=brks, fill=fill) +
     labs(x=name, y="Density", title=title) +
     scale_x_continuous(expand=c(0,0)) +
     scale_y_continuous(expand=c(0,0), limits=c(0, maxy))

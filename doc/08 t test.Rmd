@@ -1,0 +1,507 @@
+---
+title: "08 t test"
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "08_t_test"
+source("../R/setup.R")
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r one_sample_function}
+plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA), point.colour="blue") {
+  df <- data.frame(x = x)
+  maxx <- ifelse(with.point, 3, 2)
+  g <- ggplot(df, aes(x=1, y=x)) +
+    theme_dist +
+    #geom_jitter(width=0.15, height=0) +
+    geom_beeswarm(cex=2.8, size=1) +
+    labs(y="Body mass (g)") +
+    scale_x_continuous(limits=c(0, maxx)) +
+    scale_y_continuous(expand=c(0, 0), limits=limits) +
+    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank(), panel.border = element_rect(colour="grey50", fill=NA)) +
+    geom_hline(yintercept = m, colour="blue", linetype="dotted")
+  if(with.point) {
+    M <- mean(x)
+    SE <- sd(x) / sqrt(length(x))
+    pf <- data.frame(x=2, y=M, lo=M-SE, up=M+SE)
+    g <- g + 
+      geom_point(data=pf, aes(x, y), colour=point.colour) +
+      geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour=point.colour)
+  }
+  g
+}
+```
+
+
+```{r one_sided_ttest, fig.width=2, fig.height=3}
+set.seed(1878)
+g <- plotOneSample(rnorm(8, mean=25, sd=4), 20, limits=c(15,35))
+g
+ggsave(paste0(fig, "one-sided_t-test.png"), plot=g, device="png", width=2, height=3.5, dpi=300)
+```
+
+```{r generate_sample_function}
+generateZSample <- function(n, SE, M0, Z, eps=1e-3) {
+  S <- SE * sqrt(n)
+  M <- M0 + Z * SE
+  repeat {
+    x <- rnorm(n, mean=M, sd=S)
+    m <- mean(x)
+    se <- sd(x) / sqrt(length(x))
+    if(abs(abs(m - M0) - abs(Z * se)) < eps) break
+  }
+  x
+}
+```
+
+```{r plot_2SE_test, fig.width=2, fig.height=3}
+set.seed(31236)
+x1 <- generateZSample(12, 0.8, 20, 2)
+g1 <- plotOneSample(x1, 20, with.point = TRUE, limits=c(0,40))
+g1
+ggsave(paste0(fig, "two_SE_1.png"), plot=g1, device="png", width=1.8, height=3, dpi=300)
+ 
+set.seed(23)
+x2 <- generateZSample(12, 3, 20, -2)
+g2 <- plotOneSample(x2, 20, with.point = TRUE, limits=c(0,40))
+g2
+ggsave(paste0(fig, "two_SE_2.png"), plot=g2, device="png", width=1.8, height=3, dpi=300)
+```
+
+
+```{r animated_t-dist_data}
+x <- seq(-5, 5, 0.1)
+P <- lapply(1:30, function(df) {
+  y <- dt(x, df)
+  data.frame(
+    dof = df,
+    x = x,
+    y = y
+  )
+})
+tf <- do.call(rbind, P)
+ef <- data.frame(
+  x = x,
+  y = dnorm(x)
+)
+tf1 <- setNames(tf, c("dummy", "x", "y"))
+```
+
+```{r animated_t-dist, fig.width=3, fig.height=2.5}
+g <- ggplot(tf, aes(x=x, y=y)) +
+  geom_line(data=tf1, aes(x=x, y=y, group=dummy), colour="grey80", size=0.5) +
+  geom_line(colour="red", size=2) +
+  geom_line(data=ef, aes(x, y), colour="black", size=1) +
+  theme(axis.text = element_text(size=24), text = element_text(size=24), plot.title = element_text(size=26)) +
+  transition_manual(dof) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(tf$y) * 1.03)) +
+  scale_x_continuous(breaks=seq(-4,4,2), limits=c(-5,5), expand=c(0,0)) +
+  labs(title="d.o.f. = {current_frame}", x="t", y="f(t)")
+animate(g, fps = 20, renderer = gifski_renderer(loop = FALSE), width=600, height=500)
+
+anim_save(paste0(fig, "t-dist_anim.gif"))
+```
+
+```{r make_mzt_function}
+makeMZT <- function(X, M, S, N) {
+  sN <- sqrt(N)
+  data.frame(
+    m = apply(X, 1, mean),
+    z = apply(X, 1, function(x) (mean(x) - M) / (S / sN)),
+    t = apply(X, 1, function(x) (mean(x) - M) / (sd(x) / sN))
+  )
+}
+```
+
+```{r deviation_mean_null}
+set.seed(4826)
+M <- 20
+S <- 5
+N <- 5
+X <- matrix(rnorm(N * 1000000, M, S), ncol=N)
+
+mf <- makeMZT(X, M, S, N)
+```
+
+```{r plot_one_dist}
+
+```
+
+```{r deviation_mean_null_plot}
+g1 <- plotOneDist(as.vector(X), "Body mass (g)", "Original distribution",c(0, 40), dnorm, mean=M, sd=S)
+g2 <- plotOneDist(mf$z, "Z", "Distribution of Z", c(-5, 5), dnorm, mean=0, sd=1)
+g3 <- plotOneDist(mf$m, "Sample mean (g)", "Distribution of M", c(0, 40), dnorm, mean=M, sd=S/sqrt(N))
+
+x <- seq(-5, 5, length.out = 100)
+gt <- data.frame(x=x, y=dt(x, N-1))
+g4 <- plotOneDist(mf$t, "t", "Distribution of t", c(-5, 5), dnorm, mean=0, sd=1) +
+  geom_line(data=gt, aes(x, y), size=0.5, colour="blue") 
+
+g <- plot_grid(g1, g2, g3, g4, ncol=2)
+g
+
+ggsave(paste0(fig, "deviation_mean_null.png"), plot=g, device="png", width=8, height=6, dpi=300)
+```
+
+
+```{r t_cut_function}
+tCut <- function(t.obs, dof) {
+  x <- seq(-5, 5, 0.01)
+  y <- dt(x, dof)
+  dft <- data.frame(x=x, y=y)
+
+  x <- seq(t.obs, 5, 0.01)
+  df <- data.frame(
+    x = c(t.obs, x, max(x), t.obs),
+    y = c(0, dt(x, dof), 0, 0)
+  )
+  df1 <- df
+  df1$x <- -df1$x
+
+  g1 <- ggplot(df, aes(x=x, y=..density..)) +
+    theme_dist +
+    geom_line(data=dft, aes(x, y), colour="blue") +
+    labs(x="t", y="Density") +
+    scale_x_continuous(limits=c(-5, 5), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dft$y)*1.03), expand=c(0,0))
+  g2 <- g1 + geom_polygon(data=df, aes(x, y), colour="blue", fill=fill.colour.dark)
+  g3 <- g2 + geom_polygon(data=df1, aes(x, y), colour="blue", fill=fill.colour.dark)
+  list(t=g1, t.one=g2, t.two=g3)
+}
+```
+
+```{r t_cut, fig.width=4, fig.height=3}
+mass = c(19.5, 26.7, 24.5, 21.9, 22.0)
+M = mean(mass)
+n = length(mass)
+SE = sd(mass) / sqrt(n)
+t.obs = (M - 20) / SE
+dof <- length(mass) - 1
+
+lst <- tCut(t.obs, dof)
+ggsave(paste0(fig, "t_dist.png"), plot=lst$t, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "t_dist_cut.png"), plot=lst$t.one, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "t_dist_cut2.png"), plot=lst$t.two, device="png", width=3, height=2.5, dpi=300)
+
+```
+
+```{r normality_generate}
+set.seed(3245)
+M <- 20
+S <- 5
+N <- 5
+n <- 100000
+X1 <- matrix(rnorm(N * n, M, S), ncol=N)
+mf1 <- makeMZT(X1, M, S, N)
+
+X2 <- c(rnorm(N * n/2, M - 5, S/2), rnorm(N * n/2, M + 5, S/2))
+X2 <- matrix(sample(X2), ncol=N) # mix both distributions
+M2 <- mean(X2)
+S2 <- sd(X2)
+mf2 <- makeMZT(X2, M2, S2, N)
+
+X3 <- c(rnorm(N * n/4, M - 5, S/2), rnorm(N * 3 * n/4, M + 5, S/2))
+X3 <- matrix(sample(X3), ncol=N) # mix both distributions
+M3 <- mean(X3)
+S3 <- sd(X3)
+mf3 <- makeMZT(X3, M3, S3, N) 
+```
+
+
+```{r normality_plot, fig.width=6, fig.height=4}
+t.lim <- c(-5, 5)
+
+g1 <- plotOneDist(as.vector(X1), "Body mass (g)", "", c(0, 40), dnorm, mean=M, sd=S, maxy=0.085)
+g2 <- plotOneDist(mf1$t, "t", "", t.lim, dt, df=4)
+
+g3 <- plotOneDist(as.vector(X2), "Body mass (g)", "", c(0, 40), dnorm, mean=M, sd=S, maxy=0.085)
+g4 <- plotOneDist(mf2$t, "t", "", t.lim, dt, df=4, maxy=0.45)
+
+g5 <- plotOneDist(as.vector(X3), "Body mass (g)", "", c(0, 40), dnorm, mean=M, sd=S, maxy=0.125)
+g6 <- plotOneDist(mf3$t, "t", "", t.lim, dt, df=4, maxy=0.45)
+
+g <- plot_grid(g1, g3, g5, g2, g4, g6, ncol=3)
+g
+ggsave(paste0(fig, "normality_t_test.png"), plot=g, device="png", width=8, height=6, dpi=300)
+```
+
+```{r makeDMT}
+makeDMT <- function(X1, X2) {
+  n1 <- ncol(X1)
+  n2 <- ncol(X2)
+  
+  mean1 <- apply(X1, 1, mean)
+  mean2 <- apply(X2, 1, mean)
+  sd1 <- apply(X1, 1, sd)
+  sd2 <- apply(X2, 1, sd)
+  sd12 <- sqrt(((n1 - 1) * sd1^2 + (n2 - 1) * sd2^2) / (n1 + n2 - 2))
+  se.eq <- sd12 * sqrt(1/n1 + 1/n2)
+  nu.eq <- n1 + n2 - 2
+  
+  se1.sq <- sd1^2 / n1
+  se2.sq <- sd2^2 / n2
+  se.ne <- sqrt(se1.sq + se2.sq)
+  nu.ne <- (se1.sq + se2.sq)^2 / ( se1.sq^2 / (n1 - 1) +  se2.sq^2 / (n2 - 1) )
+
+  data.frame(
+    dM = mean1 - mean2,
+    sd12 = sd12,
+    se.eq = se.eq,
+    se1.sq = se1.sq,
+    se2.sq = se2.sq,
+    se.ne = se.ne,
+    nu.eq = nu.eq,
+    nu.ne = nu.ne,
+    t.eq = (mean1 - mean2) / se.eq,
+    t.ne = (mean1 - mean2) / se.ne
+  )
+}
+```
+
+```{r two_sample_ttest_generate}
+M <- 20
+S <- 5
+N1 <- 12
+N2 <- 9
+n <- 1000000
+X1 <- matrix(rnorm(N1 * n, M, S), ncol=N1)
+X2 <- matrix(rnorm(N2 * n, M, S), ncol=N2)
+
+md <- makeDMT(X1, X2) 
+```
+
+```{r two_sample_ttest_equal, fig.width=3, fig.height=5}
+#g1 <- plotOneDist(md$dM, "Mass difference (g)", expression(Distribution~of~Delta*M), c(-10, 10), NULL)
+g1 <- plotOneDist(md$t.eq, "t", "", c(-4, 4), NULL)
+g2 <- plotOneDist(md$t.eq, "t", "", c(-4, 4), dt, N1 + N2 - 2)
+ 
+ggsave(paste0(fig, "two_sample_tdist.png"), plot=g1, device="png", width=3.5, height=3, dpi=300)
+ggsave(paste0(fig, "two_sample_tdist_t.png"), plot=g2, device="png", width=3.5, height=3, dpi=300)
+```
+
+
+```{r ttest_variance}
+M <- 20
+S1 <- 5
+S2 <- 2.5
+N1 <- 12
+N2 <- 9
+n <- 1000000
+X1 <- matrix(rnorm(N1 * n, M, S1), ncol=N1)
+X2 <- matrix(rnorm(N2 * n, M, S2), ncol=N2)
+ 
+mv <- makeDMT(X1, X2)
+```
+
+```{r read_eng_sco}
+mice <- read.table("../data/mice_2samples.txt", header=TRUE)
+English <- mice[mice$Country=="English", "Mass"]
+Scottish <- mice[mice$Country=="Scottish", "Mass"]
+mice %>% group_by(Country) %>% summarise(M=mean(Mass), SD=sd(Mass), VAR=var(Mass))
+mice.prop <- makeDMT(
+  matrix(English, nrow=1), 
+  matrix(Scottish, nrow=1)
+)
+mice.prop
+t.test(Scottish, English, var.equal = TRUE, alternative = "greater")
+t.test(Scottish, English, var.equal = FALSE, alternative = "greater")
+```
+
+
+```{r ttest_var, fig.width=3, fig.height=3}
+lst.eq <- tCut(t.obs=mice.prop$t.eq, mice.prop$nu.eq)
+lst.ne <- tCut(t.obs=mice.prop$t.ne, mice.prop$t.ne)
+lst.eq$t.one
+lst.ne$t.one
+ 
+ggsave(paste0(fig, "t_eq.png"), plot=lst.eq$t.one, device="png", width=3, height=2.5, dpi=300)
+ggsave(paste0(fig, "t_ne.png"), plot=lst.ne$t.one, device="png", width=3, height=2.5, dpi=300)
+```
+
+
+```{r ttest_variance_plot, fig.width=3, fig.height=5}
+g1 <- plotOneDist(mv$t.eq, "t", expression(Equal~variance), c(-4, 4), dt, N1 + N2 - 2)
+g2 <- plotOneDist(mv$t.ne, "t", expression(Unequal~variance), c(-4, 4), dt, N1 + N2 - 2)
+g <- plot_grid(g1, g2, ncol=1)
+g
+
+ggsave(paste0(fig, "ttest_variance.png"), plot=g, device="png", width=3.5, height=6, dpi=300)
+```
+
+
+```{r generate_effect_pvalue}
+generateEffectP <- function(n, p, M1=20, S=5, eps=1e-4, max.iter=10000) {
+  t <- qt(1 - p, 2 * n - 2)
+  SE <- S / sqrt(n)
+  dM <- t * SE
+  M2 <- M1 + dM
+  
+  i <- 1
+  repeat {
+    x1 <- rnorm(n, M1, S)
+    x2 <- rnorm(n, M2, S)
+    test <- t.test(x1, x2)
+    delta <- abs(p - test$p.value)
+    i <- i + 1
+    #cat(paste(i, delta, test$p.value, "\n"))
+    if(delta < eps || i > max.iter) break
+  }
+  list(x1=x1, x2=x2, p=test$p.value, fc=mean(x2) / mean(x1), dM=mean(x2) - mean(x1))
+}
+```
+
+
+```{r effect_pvalue}
+set.seed(777)
+dat1 <- generateEffectP(8, 0.02)
+dat2 <- generateEffectP(100, 0.02)
+```
+
+```{r plot_mice}
+plotMice <- function(dat) {
+  d <- data.frame(
+    Country = c(rep("English", length(dat$x1)), rep("Scottish", length(dat$x2))),
+    Mass = c(dat$x1, dat$x2)
+  )
+  g <- ggplot(d, aes(x=Country, y=Mass)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    geom_boxplot(aes(fill=Country), alpha=0.5, colour="grey50") +
+    scale_fill_manual(values=british.palette) +
+    #geom_jitter(width=0.15, height=0) +
+    geom_beeswarm(cex=2.5, size=1, priority="density") +
+    labs(x="", y="Body mass (g)")
+  g
+}
+```
+
+```{r plot_effect_pvalue}
+g1 <- plotMice(dat1)
+g2 <- plotMice(dat2)
+
+g <- plot_grid(g1, g2, ncol=2)
+g
+
+ggsave(paste0(fig, "ttest_pvalue_effect.png"), plot=g, device="png", width=4, height=3, dpi=300)
+
+dat1$p
+dat1$dM
+dat2$p
+dat2$dM
+```
+
+
+```{r paired_ttest_data}
+before <- c(21.4, 20.2, 23.5, 17.5, 18.6, 17.0, 18.9, 19.2)
+after <- c(22.6, 20.9, 23.8, 18.0, 18.4, 17.9, 19.3, 19.1)
+t.test(after, before, paired=TRUE, alternative="greater")
+```
+
+```{r paired_ttest_figure, fig.width=2.5, fig.height=3}
+x <- data.frame(Before=before, After=after, sign=as.factor(sign(before-after)))
+m <- data.frame(
+  type = c(rep("Before", length(before)), rep("After", length(after))),
+  value = c(before, after)
+)
+m$type <- factor(m$type, levels=c("Before", "After"))
+g <- ggplot(m, aes(type, value)) +
+  labs(x="", y="Body mass (g)") +
+  geom_point() +
+  geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) +
+  geom_point() +
+  theme(legend.position = "none") +
+  scale_color_manual(values=cbPalette)
+g
+
+ggsave(paste0(fig, "ttest_paired.png"), plot=g, device="png", width=2.5, height=3.5, dpi=300)
+```
+
+
+
+```{r ftest}
+set.seed(1966)
+M <- 20
+S <- 5
+N1 <- 12
+N2 <- 9
+n <- 100000
+X1 <- matrix(rnorm(N1 * n, M, S), ncol=N1)
+X2 <- matrix(rnorm(N2 * n, M, S), ncol=N2)
+
+sd1 <- apply(X1, 1, sd)
+sd2 <- apply(X2, 1, sd)
+F <- sd1^2 / sd2^2
+```
+
+
+```{r ftest_distribution, fig.width=3, fig.height=2.5}
+#rm(df)
+g1 <- plotOneDist(F, "F", "", c(0, 6), NULL)
+g2 <- plotOneDist(F, "F", "", c(0, 6), df, df1=N1-1, df2=N2-1)
+g1
+g2
+
+ggsave(paste0(fig, "ftest_distribution.png"), plot=g1, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "ftest_distribution_line.png"), plot=g2, device="png", width=4, height=3, dpi=300)
+```
+
+```{r f_cut_function}
+fCut <- function(F.obs, dof1, dof2) {
+  x <- seq(0, 10, 0.01)
+  y <- df(x, dof1, dof2)
+  dft <- data.frame(x=x, y=y)
+
+  x <- seq(F.obs, 6, 0.01)
+  dat <- data.frame(
+    x = c(F.obs, x, max(x), F.obs),
+    y = c(0, df(x, dof1, dof2), 0, 0)
+  )
+
+  g1 <- ggplot(dat, aes(x=x, y=..density..)) +
+    theme_dist +
+    geom_line(data=dft, aes(x, y), colour="blue") +
+    labs(x="F", y="Density") +
+    scale_x_continuous(limits=c(0, 6), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dft$y)*1.03), expand=c(0,0))
+  g2 <- g1 + geom_polygon(data=dat, aes(x, y), colour="blue", fill=fill.colour.dark)
+  list(f=g1, f.one=g2)
+}
+```
+
+```{r fcut_plot, fig.width=3, fig.height=2}
+F.obs <- sd(English)^2 / sd(Scottish)^2
+F.obs
+1 - pf(F.obs, length(English) - 1, length(Scottish) - 1)
+xx <- fCut(F.obs, length(English) - 1, length(Scottish) - 1)
+g <- xx$f.one
+g
+
+ggsave(paste0(fig, "ftest_cut.png"), plot=g, device="png", width=3, height=2.5, dpi=300)
+```

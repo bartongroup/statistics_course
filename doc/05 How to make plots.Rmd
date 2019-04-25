@@ -396,7 +396,7 @@ dm <- data.frame(
 g1 <- ggplot() +
   theme_classic() +
   theme(legend.position = "none", plot.margin = margin(r=30)) +
-  geom_boxplot(data=dm, aes(x=x, middle=y, ymin=y, lower=y, upper=y, ymax=y), stat="identity", width=0.7, lwd=0.6) +
+  geom_boxplot(data=dm, aes(x=x, middle=y, ymin=y, lower=y, upper=y, ymax=y), stat="identity", width=0.7, lwd=0.6, fatten=0) +
   geom_beeswarm(data=d[d$type == "WT", ], aes(type, value), size=0.8, cex=2.5, shape=21, fill=fill.colour) +
   geom_boxplot(data=d[d$type != "WT", ], aes(type, value, fill=type)) +
   scale_fill_manual(values=cbPalette) +
@@ -414,5 +414,209 @@ g2 <- ggplot(fastq) +
 
 g <- plot_grid(g1, g2, nrow=1, rel_widths = c(1,2.2), align="h")
 ggsave(paste0(fig, "boxplot_examples.png"), plot=g, device="png", width=7, height=3, dpi=300)
+```
+
+
+
+```{r barplot_example_1}
+d <- data.frame(
+  n = c(101, 98, 112, 100, 104, 89, 99, 100),
+  s = c(86, 23, 67, 55, 95, 12, 34, 34),
+  cond = rep(c("WT", "KO1", "KO2", "KO3"), 2),
+  treat = c(rep("DMSO", 4), rep("DD342", 4))
+)
+d$p <- d$s / d$n
+d$cond <- relevel(d$cond, "WT")
+d$treat <- relevel(d$treat, "DMSO")
+
+P <- lapply(1:nrow(d), function(i) {
+  prop.test(d$s[i], d$n[i])$conf.int
+})
+lim <- setNames(as.data.frame(do.call(rbind, P)), c("lo", "up"))
+d <- cbind(d, lim)
+
+g <- ggplot(d, aes(x=cond, y=p, fill=treat)) +
+  theme_classic() +
+  theme(legend.position = "bottom") +
+  geom_bar(position=position_dodge(0.8), stat="identity", colour="black", width=0.8) +
+  geom_errorbar(aes(ymin=lo, ymax=up), width=.2, position=position_dodge(0.8)) +
+  scale_fill_manual(values=c(fill.colour, fill.colour.dark), name="Treatment") +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$up) * 1.03)) +
+  labs(x=NULL, y="Proportion of cells")
+
+g
+ggsave(paste0(fig, "barplot_example1.png"), plot=g, device="png", width=4, height=3, dpi=300)
+```
+
+```{r barplot_example_2}
+set.seed(1)
+x <- c(runif(500), abs(rnorm(100, 0, 0.04)))
+
+brks <- seq(0, 1, 0.1)
+g <- ggplot(data.frame(x=x), aes(x=x)) +
+  theme_classic() +
+  theme(axis.title.y.right = element_text(margin=margin(l=8))) +
+  theme(plot.margin = margin(l=10, r=12, t=10)) +
+  geom_histogram(breaks=brks, fill=fill.colour, colour="black") +
+  labs(x="P-value", y="Count") +
+  scale_x_continuous(expand=c(0,0), breaks=seq(0,1,0.2)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 150), sec.axis = sec_axis(~./60, "Density"))
+
+g
+ggsave(paste0(fig, "barplot_example2.png"), plot=g, device="png", width=4.5, height=3.5, dpi=300)
+```
+
+```{r bad_bar_plots}
+d <- data.frame(
+  x = c("Control", "Treatment"),
+  y = c(400, 800)
+)
+
+bar1 <- function(d, lims=c(0, 900), ylab="Count") {
+  ggplot(d, aes(x, y)) +
+    theme_classic() +
+    geom_col(fill=fill.colour, colour="black") +
+    coord_cartesian(ylim=lims, xlim=c(0.3,2.8), expand=FALSE) +
+    labs(x=NULL, y=ylab)
+}
+g1 <- bar1(d, lims=c(0, 900))
+g2 <- bar1(d, lims=c(350, 850))
+g <- plot_grid(g1, g2, nrow=1, align="h")
+g
+
+ggsave(paste0(fig, "badbar_baseline.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+
+d$y <- log10(d$y)
+
+g1 <- bar1(d, lims=c(0, 3), ylab=expression(log[10]~count))
+g2 <- bar1(d, lims=c(2.2, 3), ylab=expression(log[10]~count))
+g <- plot_grid(g1, g2, nrow=1, align="h")
+g
+
+ggsave(paste0(fig, "badbar_log.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
+```
+
+```{r barplot_problems_1}
+set.seed(1383)
+n <- 20
+M <- c(1.4, 1.35, 1.25, 1.25, 1.23, 1.25)
+d <- lapply(1:length(M), function(i) {
+  data.frame(sample=i, speed=rnorm(n, M[i], 0.15))
+})
+d <- do.call(rbind, d)
+dm <- d %>% group_by(sample) %>% summarise(m=mean(speed), se=sd(speed) / sqrt(n()))
+
+g0 <- ggplot() +
+  theme_classic() +
+  scale_x_continuous(breaks=seq(1:length(M))) +
+  labs(x="Sample", y = ~ "Speed ("*mu*m/min*")")
+
+wdth <- 2.5
+hght <- 2.5
+
+g1 <- g0 +
+  geom_col(data=dm, aes(x=sample, y=m), fill=fill.colour, colour="black") + 
+  geom_errorbar(data=dm, aes(x=sample, ymin=m-se, ymax=m+se), width=0.2) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(dm$m+dm$se)*1.03))
+
+g1
+ggsave(paste0(fig, "bar_problem_1.png"), plot=g1, device="png", width=wdth, height=hght, dpi=300)
+
+g2 <- g0 +
+  geom_point(data=dm, aes(x=sample, y=m), colour="black") + 
+  geom_errorbar(data=dm, aes(x=sample, ymin=m-se, ymax=m+se), width=0.2)
+g2
+ggsave(paste0(fig, "bar_problem_2.png"), plot=g2, device="png", width=wdth, height=hght, dpi=300)
+
+d$samplef <- as.factor(d$sample)
+g3 <- g0 +
+  theme(legend.position = "none") +
+  geom_boxplot(data=dm, aes(x=sample, middle=m, ymin=m, lower=m, upper=m, ymax=m), stat="identity", width=0.5, lwd=0.5, fatten=0) +
+  geom_beeswarm(data=d, aes(x=sample, y=speed, fill=samplef), shape=21, colour="black", cex=1.8, size=0.8) +
+  scale_fill_manual(values=cbPalette)
+g3
+ggsave(paste0(fig, "bar_problem_3.png"), plot=g3, device="png", width=wdth, height=hght, dpi=300)
+```
+
+```{r barplot_problems_2}
+set.seed(557)
+t <- seq(0, 16, 2)
+n <- length(t)
+y1 <-  40 - 2 * t + rnorm(n, 0, 2)
+s1 <-  rnorm(n, 2, 0.3)
+y2 <-  3 + t + rnorm(n, 0, 1)
+s2 <-  rnorm(n, 2, 0.3)
+
+d <- data.frame(
+  time = c(t, t),
+  type = c(rep("A", n), rep("B", n)),
+  y = c(y1, y2),
+  s = c(s1, s2)
+)
+
+wdth <- 3.5
+hght <- 2.5
+g0 <- ggplot(d, aes(x=time, y=y)) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  labs(x="Time (h)", y = ~ "Distance ("*mu*m*")") +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$y + d$s) * 1.03)) 
+
+g1 <- g0 +
+  geom_errorbar(aes(ymin=y-s, ymax=y+s, group=type), width=.5, position=position_dodge(1.5)) +
+  geom_bar(aes(fill=type), position=position_dodge(1.5), stat="identity", colour="black", width=1.5) +
+  scale_fill_manual(values=c("black", "white"), name="Treatment")
+g1
+
+ggsave(paste0(fig, "bar_problem_4.png"), plot=g1, device="png", width=wdth, height=hght, dpi=300)
+
+g2 <- g0 +
+  geom_errorbar(aes(ymin=y-s, ymax=y+s, group=type), width=.5) +
+  geom_pointpath(aes(fill=type, group=type), shape=21, colour="black", linecolour="grey70") +
+  scale_fill_manual(values=c("black", "white"), name="Treatment")
+
+g2
+
+ggsave(paste0(fig, "bar_problem_5.png"), plot=g2, device="png", width=wdth, height=hght, dpi=300)
+```
+
+
+```{r dynamite_plots}
+d <- data.frame(
+  type = c("WT", "T1", "T2"),
+  value = c(100, 87, 59),
+  lo = c(NA, 61, 48),
+  up = c(NA, 98, 69)
+)
+d$type <- relevel(d$type, "WT")
+
+g <- ggplot(d, aes(x=type, y=value, ymin=lo, ymax=up)) +
+  theme_classic() +
+  labs(x=NULL, y="Percentage") +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 105))
+
+g1 <- g +
+  geom_errorbar(width=.5) +
+  geom_col(fill="black")
+
+g2 <- g +
+  geom_col(fill="grey60") +
+  geom_errorbar(width=.5)
+
+g3 <- ggplot(d[2:3, ], aes(x=type, y=value/100, ymin=lo/100, ymax=up/100)) +
+  theme_classic() +
+  labs(x=NULL, y="WT fraction") +
+  geom_hline(yintercept = 1, colour="grey60") +
+  geom_errorbar(width=.2) +
+  geom_point()
+
+g1
+g2
+g3
+
+ggsave(paste0(fig, "dynamite_1.png"), plot=g1, device="png", width=2, height=4, dpi=300)
+ggsave(paste0(fig, "dynamite_2.png"), plot=g2, device="png", width=2, height=4, dpi=300)
+ggsave(paste0(fig, "dynamite_3.png"), plot=g3, device="png", width=2, height=2, dpi=300)
 
 ```
+
