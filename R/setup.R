@@ -69,7 +69,8 @@ plotOneDist <- function(d, name, title, limits, fun=NULL, ..., bins=100, f.bins=
 }
 
 plotDistributionCut <- function(x, cut=NULL, locut=NULL, side="upper", brks=seq(-1, 1, 0.01), 
-                                xlab="", fill=fill.colour.mid, x.brks=waiver()) {
+                                xlab="", fill=fill.colour.mid, fill.cut=fill.colour.dark,
+                                x.brks=waiver(), outline.colour="black") {
   df <- data.frame(x = x)
   
   dst <- ggplot(df, aes(x=x, y=..density..)) +
@@ -80,7 +81,7 @@ plotDistributionCut <- function(x, cut=NULL, locut=NULL, side="upper", brks=seq(
   maxh <- max(ggplot_build(dst)$data[[1]]$density)  # max density in histogram
   dst <- dst + scale_y_continuous(expand=c(0,0), limits=c(0, maxh*1.03))
   
-  gout <- geom_outline(x, brks, size=0.3)
+  gout <- geom_outline(x, brks, size=0.3, colour=outline.colour)
   
   if(!is.null(cut)) {
     cut <- brks[which.min(abs(brks - cut))]
@@ -92,8 +93,8 @@ plotDistributionCut <- function(x, cut=NULL, locut=NULL, side="upper", brks=seq(
     df.cut.upper <- df[df$x >= cut.up,, drop=FALSE]
     norm.fac.lower <- nrow(df.cut.lower) / nrow(df)
     norm.fac.upper <- nrow(df.cut.upper) / nrow(df)
-    g.upper <- geom_histogram(data=df.cut.upper, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac.upper))
-    g.lower <- geom_histogram(data=df.cut.lower, breaks=brks, fill=fill.colour.dark, aes(y=..density.. * norm.fac.lower))
+    g.upper <- geom_histogram(data=df.cut.upper, breaks=brks, fill=fill.cut, aes(y=..density.. * norm.fac.upper))
+    g.lower <- geom_histogram(data=df.cut.lower, breaks=brks, fill=fill.cut, aes(y=..density.. * norm.fac.lower))
     if(side == "upper") {
       return(dst + g.upper + gout)
     } else if (side == "lower") {

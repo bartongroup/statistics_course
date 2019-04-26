@@ -40,18 +40,22 @@ pre code, pre, code {
 efPalette <- c("lightgoldenrod3", "#009E73")
 ```
 
+```{r themes}
+theme_no_y <- theme(
+    legend.position = "none",
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank()
+  )
+```
+
 
 ```{r two_dist_plot_function}
 plotTwoDist <- function(d1, d2, breaks, alpha=0.8, ymax=1) {
   g <- ggplot() +
     theme_classic() +
-    theme(
-      legend.position = "none",
-      axis.line.y = element_blank(),
-      axis.ticks.y = element_blank(),
-      axis.text.y = element_blank(),
-      axis.title.y = element_blank()
-    ) +
+    theme_no_y +
     labs(x="Body mass (g)", y=NULL) +
     scale_y_continuous(expand=c(0,0), limits=c(0, ymax))
   g <- g +
@@ -181,3 +185,88 @@ ggsave(paste0(fig, "mice_p_full_10.png"), plot=g2, device="png", width=3, height
 
 ```
 
+
+```{r effect_size_generate}
+set.seed(3736)
+nsim <- 100000
+mu <- 20
+n <- 3
+
+pop <- rnorm(10000, 25, 5)
+L <- lapply(1:nsim, function(i) {
+  x <- sample(pop, n)
+  M <- mean(x)
+  p <- t.test(x, mu = mu)$p.value
+  data.frame(M=M, p=p)
+})
+eff <- do.call(rbind, L)
+```
+
+```{r plot_effect_size}
+eff$sig <- eff$p < 0.05
+mean(eff[eff$sig, "M"])
+
+brks <- seq(10, 40, 0.2)
+g1 <- ggplot(eff) +
+  theme_classic() +
+  theme_no_y +
+  geom_histogram(aes(x=M, fill=sig), breaks=brks) +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_fill_manual(values=efPalette) +
+  geom_outline(eff$M, brks, y.value = "count", colour="grey30", size=0.3) +
+  labs(x="Sample mean (g)") +
+  geom_vline(xintercept = 20) +
+  geom_vline(xintercept = 25, linetype="dotted")
+
+  maxh <- max(ggplot_build(g1)$data[[1]]$y)  # max count in histogram
+  g1 <- g1 + scale_y_continuous(expand=c(0,0), limits=c(0, maxh*1.03))
+
+
+g2 <- plotDistributionCut(eff$p, cut=0.05, brks=seq(0,1,0.01), fill=efPalette[2], fill.cut=efPalette[1], outline.colour="grey30", xlab="P-value", x.brks = seq(0, 1, 0.2)) +
+  theme_no_y
+g1
+g2
+
+ggsave(paste0(fig, "effect_size_M.png"), plot=g1, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "effect_size_p.png"), plot=g2, device="png", width=3, height=3, dpi=300)
+
+```
+
+
+```{r large_samples}
+#set.seed(44)
+#s1 <- rnorm(775, 0.45, 0.2)
+#s2 <- rnorm(392, 0.484, 0.2)
+
+X <- read.table("../data/all_update.txt", header=FALSE, sep="\t")
+X <- setNames(X[, c(11, 30)], c("distance", "strain"))
+
+d <- X[X$strain %in% c("70.6kb", "71kb"), ]
+d$distance <- d$distance / 1000
+
+m <- d %>% group_by(strain) %>% summarise(M = mean(distance), SE = sd(distance) / sqrt(n()))
+
+t.test(distance ~ strain, data=d)
+
+g1 <- ggplot(m) +
+  theme_classic() +
+  geom_errorbar(aes(x=strain, ymin=M-SE, ymax=M+SE), width=0.1) +
+  geom_col(aes(x=strain, y=M), fill="black", width=0.5) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(m$M + m$SE)*1.03)) +
+  labs(x=NULL, y = ~ "Distance ("*mu*m*")")
+g1
+
+g2 <- ggplot() +
+    theme_classic() +
+    theme(legend.position = "none") +
+    scale_colour_manual(values=cbPalette) +
+    geom_beeswarm(data=d, aes(x=strain, y=distance), cex=1, size=0.15, priority = "density") +
+    labs(x=NULL, y = ~ "Distance ("*mu*m*")")
+
+    g2 <- g2 + geom_boxplot(data=m, aes(x=strain, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="darkgoldenrod3")
+
+g2
+ggsave(paste0(fig, "large_sample_shitplot.png"), plot=g1, device="png", width=2, height=3, dpi=300)
+ggsave(paste0(fig, "large_sample.png"), plot=g2, device="png", width=2.5, height=3, dpi=300)
+
+```
