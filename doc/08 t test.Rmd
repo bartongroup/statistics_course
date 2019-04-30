@@ -35,9 +35,12 @@ pre code, pre, code {
 ```
 
 ```{r one_sample_function}
-plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA), point.colour="blue") {
+plotOneSample <- function(x, m, with.point=FALSE, limits=NULL, point.colour="blue", error.type="SE") {
   df <- data.frame(x = x)
   maxx <- ifelse(with.point, 3, 2)
+  if(is.null(limits)) {
+    limits <- c(0, max(x) * 1.03)
+  }
   g <- ggplot(df, aes(x=1, y=x)) +
     theme_dist +
     #geom_jitter(width=0.15, height=0) +
@@ -50,7 +53,9 @@ plotOneSample <- function(x, m, with.point=FALSE, limits=c(0,NA), point.colour="
   if(with.point) {
     M <- mean(x)
     SE <- sd(x) / sqrt(length(x))
-    pf <- data.frame(x=2, y=M, lo=M-SE, up=M+SE)
+    tc <- qt(0.975, df = length(x) - 1)
+    E <- ifelse(error.type=="SE", SE, tc*SE)
+    pf <- data.frame(x=2, y=M, lo=M-E, up=M+E)
     g <- g + 
       geom_point(data=pf, aes(x, y), colour=point.colour) +
       geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour=point.colour)
@@ -251,6 +256,46 @@ g <- plot_grid(g1, g3, g5, g2, g4, g6, ncol=3)
 g
 ggsave(paste0(fig, "normality_t_test.png"), plot=g, device="png", width=8, height=6, dpi=300)
 ```
+
+
+```{r test_vs_ci}
+mass <- c(19.5, 26.7, 24.5, 21.9, 22.0)
+n <- length(mass)
+M <- mean(mass)
+SE <- sd(mass) / sqrt(n)
+
+# 95% CI
+tc <- qt(0.975, df = n - 1)
+M - tc * SE
+M + tc * SE
+
+# T-test
+t <- (M - 20) / SE
+2 *(1 - pt(t, n - 1))
+
+# both
+t.test(mass, mu=20)
+```
+
+```{r find_5}
+set.seed(222)
+done <- FALSE
+while(!done) {
+  x5 <- rnorm(5, 25, 5)
+  p <- t.test(x5, mu=20)$p.value
+  done <- abs(p - 0.05) < 1e-5
+}
+```
+
+```{r plot_5}
+t.test(x5, mu=20)
+
+g <- plotOneSample(x5, 20, limits=c(min(x5)-2, max(x5)+2), with.point=TRUE, error.type="CI")
+g
+
+ggsave(paste0(fig, "CI_vs_test_5.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300)
+```
+
 
 ```{r makeDMT}
 makeDMT <- function(X1, X2) {

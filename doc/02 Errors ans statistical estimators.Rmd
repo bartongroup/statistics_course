@@ -1,5 +1,5 @@
 ---
-title: "Probability distributions"
+title: "Errors; statistical estimators"
 output:
   html_document:
     css: tabbed_notebook.css
@@ -61,6 +61,10 @@ ggsave(paste0(fig, "mini_normal.png"), plot=g, device="png", width=2, height=2, 
 
 
 ```{r normal_gene}
+bins <- 5
+lims <- c(30, 120)
+brks <- seq(lims[1], lims[2], bins)
+
 dat <- read.table("../data/WT_lev.tsv", sep="\t", header=FALSE)
 x <- as.integer(dat[dat$V1 == "ybr019c", 2:ncol(dat)])
 x <- x[c(-21,-22,-25,-28,-31,-34,-36)]  # clean replicates
@@ -69,9 +73,10 @@ bs <- beeswarm(x, do.plot = FALSE, cex=2)
 M <- mean(x)
 S <- sd(x)
 xx <- seq(30, 150, 1)
-gs <- data.frame(x=xx, y=dnorm(xx, mean=M, sd=S))
+gs <- data.frame(x=xx, y=dnorm(xx, mean=M, sd=S) * length(x) * bins)
 
-lims <- c(30, 120)
+
+
 
 # data plot
 g1 <- ggplot(bs, aes(x=y, y=x)) +
@@ -84,12 +89,12 @@ g1 <- ggplot(bs, aes(x=y, y=x)) +
     plot.margin = margin(t=-1)
   ) +
   geom_point(size=1.5) +
-  labs(x = "Count", y="") +
+  labs(x = "Reads per gene", y="") +
   scale_y_continuous(expand=c(0,0), limits=c(0.5,1.5)) +
-  scale_x_continuous(limits=lims)
+  scale_x_continuous(limits=lims, breaks=seq(0, 200, 20))
 
 # main plot
-g2 <- ggplot(df, aes(x=x, y=..density..)) +
+g2 <- ggplot(df, aes(x=x)) +
   theme_dist +
   theme(
     axis.text = element_text(size=12),
@@ -98,16 +103,16 @@ g2 <- ggplot(df, aes(x=x, y=..density..)) +
     axis.ticks.x = element_blank(),
     plot.margin = margin(l=3, r=2, b=0, t=1)
   ) +
-  geom_histogram(bins=16, fill=fill.colour) +
+  geom_histogram(breaks=brks, fill=fill.colour, colour="black", size=0.3) +
   geom_line(data=gs, aes(x,y), colour="red") +
-  scale_y_continuous(expand=c(0,0), limits=c(0,0.038), breaks=1:5/100) +
-  labs(x=NULL) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 9), breaks=seq(2, 10, 2)) +
+  labs(x=NULL, y="Frequency") +
   scale_x_continuous(limits=lims)
 
 g <- plot_grid(g2, g1, ncol=1, align = "v", rel_heights = c(3, 1))
 g
 
-ggsave(paste0(fig, "normal_gene.png"), plot=g, device="png", width=4, height=4.5, dpi=300)
+ggsave(paste0(fig, "normal_gene.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300)
 ```
 
 
@@ -377,6 +382,73 @@ g <- plot_grid(g1, g2, ncol=2)
 ggsave(paste0(fig, "sampling_mean_se.png"), plot=g, device="png", width=7, height=4.5, dpi=300)
 ```
 
+```{r median}
+set.seed(112)
+n <- 10
+x1 <- sort(rnorm(n, 20, 5))
+x2 <- x1
+x2[n] <- 60
+x2[n-1] <- 55
+d <- data.frame(
+  type = c(rep("Symmetric", n), rep("Outliers", n)),
+  value = c(x1, x2)
+)
+d$type <- relevel(d$type, "Symmetric")
+dm <- d %>% group_by(type) %>% summarise(mean=mean(value), median=median(value)) %>% mutate(i=as.integer(type))
+
+shift <- 0.3
+g <- ggplot() +
+  theme_classic() +
+  theme(legend.position = "none") +
+  geom_beeswarm(data=d, aes(x=type, y=value), shape=21, cex=3, size=2, fill="white") +
+  geom_segment(data=dm, aes(x=i-shift, xend=i+shift, y=mean, yend=mean), size=0.9, colour="royalblue3", lineend="round") +
+  geom_segment(data=dm, aes(x=i-shift, xend=i+shift, y=median, yend=median), size=0.9, colour="seagreen4", lineend="round") +
+  scale_fill_manual(values=cbPalette) +
+  labs(x=NULL, y=NULL)
+
+g
+
+ggsave(paste0(fig, "median.png"), plot=g, device="png", width=2.5, height=2.5, dpi=300)
+```
+
+
+```{r sampling_distributions_generate}
+set.seed(987)
+n <- 5
+nsim <- 1000000
+npar <- 6
+ns <- nsim / npar
+mu <- 20 
+sigma <- 5
+P <- mclapply(1:npar, function(i) {
+  d <- lapply(1:ns, function(k) {
+    x <- rnorm(n, mu, sigma)
+    data.frame(
+      Mean = mean(x),
+      Median = median(x)
+    )
+  })
+  do.call(rbind, d)
+}, mc.cores=npar)
+sam.dist <- do.call(rbind, P)
+```
+
+```{r mean_median_sampling}
+sd(sam.dist$Mean) 
+sd(sam.dist$Median)
+brks <- seq(8, 32, 0.2)
+g <- ggplot() +
+  theme_classic() +
+  geom_outline(sam.dist$Mean, colour="royalblue3", breaks=brks) +
+  geom_outline(sam.dist$Median, colour="seagreen4", breaks=brks) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,0.2)) +
+  labs(x="Mass (g)", y="Density")
+
+g
+ggsave(paste0(fig, "mean_median_sampling.png"), plot=g, device="png", width=2.5, height=2.5, dpi=300)
+
+```
+
 ```{r correlation, fig.width=9}
 set.seed(233)
 x <- runif(30)
@@ -389,10 +461,17 @@ plotR <- function(d) {
   r <- round(cor(d$x, d$y),2)
   ggplot(d, aes(x, y)) +
     theme_classic() +
+    theme(
+      axis.title = element_blank(),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text = element_blank(),
+      panel.border = element_rect(fill=NA)
+    ) +
     geom_point() +
     scale_x_continuous(limits=c(0, 1)) +
     scale_y_continuous(limits=c(0, 1)) +
-    annotate("text", x=0.17, y=0.99, label=paste0("r = ", r))
+    annotate("text", x=0.14, y=0.99, label=paste0("r = ", r))
 }
 
 g1 <- plotR(d1)

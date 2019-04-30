@@ -51,14 +51,14 @@ geom_outline <- function(d, breaks, ..., y.value="density") {
 
 plotOneDist <- function(d, name, title, limits, fun=NULL, ..., bins=100, f.bins=100,
                         maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50",
-                        fill=fill.colour.mid) {
+                        fill=fill.colour.mid, brks.y=waiver()) {
   brks <- seq(limits[1], limits[2], length.out = bins)
   g <- ggplot(data.frame(d=d), aes(x=d, y=..density..)) +
     theme_classic() +
     geom_histogram(breaks=brks, fill=fill) +
     labs(x=name, y="Density", title=title) +
     scale_x_continuous(expand=c(0,0)) +
-    scale_y_continuous(expand=c(0,0), limits=c(0, maxy))
+    scale_y_continuous(expand=c(0,0), limits=c(0, maxy), breaks=brks.y)
   if(with.outline) g <- g + geom_outline(d, brks, colour=outline.colour)
   if(!is.null(fun)) {
     x <- seq(limits[1], limits[2], length.out = f.bins)

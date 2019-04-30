@@ -12,6 +12,7 @@ params:
 ```{r setup, echo=FALSE}
 root <- "01_probability_distributions"
 source("../R/setup.R")
+library(beeswarm)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -94,8 +95,8 @@ sum(dist.cut$y)
 
 g <- ggplot(dist, aes(x, y)) +
   theme_classic() +
-  geom_col(fill=fill.colour, colour="black", width=0.8) +
-  geom_col(data=dist.cut, fill=fill.colour.dark, colour="black", width=0.8) +
+  geom_col(fill=fill.colour, colour="black", width=0.7, size=0.3) +
+  geom_col(data=dist.cut, fill=fill.colour.dark, colour="black", width=0.7, size=0.3) +
   scale_x_continuous(breaks=0:12) +
   scale_y_continuous(expand=c(0,0), limits=c(0, max(dist$y)*1.1)) +
   labs(x = "k", y = "P(X = k)")
@@ -123,7 +124,7 @@ x <- seq(0, 30, 0.1)
 y <- dchisq(x, dof)
 dchi2 <- data.frame(x=x, y=y)
 
-chi2cut <- 12
+chi2cut <- 10
 1 - pchisq(chi2cut, dof)
 
 g <- ggplot() +
@@ -185,14 +186,33 @@ ggsave(paste0(fig, "normal_example_2.png"), plot=g2, device="png", width=3, heig
 bb <- read.table("../data/baseball.txt", header=TRUE, sep="\t", quote="")
 bb$height <- 2.54 * bb$Height.inches.
 
+tab <- table(bb$height)
+d <- data.frame(
+  x = as.numeric(names(tab)),
+  y = as.integer(tab)
+)
+bins <- d$x[2] - d$x[1]
+
 M <- mean(bb$height)
 S <- sd(bb$height)
 dim(bb)
 M
 S
 
+xx <- seq(100, 250, 0.1)
+m <- data.frame(
+  x = xx,
+  y = dnorm(xx, M, S) * sum(d$y) * bins
+)
 
-g <- plotOneDist(bb$height, "Height (cm)", "", c(165, 215), dnorm, M, S, bins=22, alpha.line = 0.7)
+g <- ggplot(d, aes(x, y)) +
+  geom_segment(aes(xend=x, yend=0), colour="grey60") +
+  geom_point(shape=21, fill="white", size=2) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$y) * 1.03)) +
+  geom_line(data=m, aes(x, y), colour="red") +
+  labs(x = "Height (cm)", y = "Frequency") +
+  scale_x_continuous(limits=c(165, 215), expand=c(0,0))
+
 g
 
 ggsave(paste0(fig, "baseball_height.png"), plot=g, device="png", width=5, height=4, dpi=300)
@@ -443,4 +463,22 @@ ggsave(paste0(fig, "dnorm.png"), plot=g1, device="png", width=2, height=1.4, dpi
 g2 <- plotFun(dnorm, x.grid=seq(-4, 4, 0.01), cut.lo = -qnorm(0.975), cut.up = qnorm(0.975)) +
   theme.d
 ggsave(paste0(fig, "dnorm2.png"), plot=g2, device="png", width=2, height=1.4, dpi=300)
+
+k <- 0:8
+d <- data.frame(
+  k = k,
+  p = dbinom(k, 8, 0.5)
+)
+
+g3 <- ggplot(d, aes(x=k, y=p)) +
+  theme_dist +
+  theme.d +
+  #scale_x_discrete(breaks=k, labels=k) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(d$p) * 1.05)) +
+  geom_col(fill=fill.colour, colour="black", width=0.6, size=0.2) +
+  labs(x=NULL, y=NULL) +
+  geom_col(data=d[7:9, ], fill=fill.colour.dark, colour="black", width=0.6, size=0.2)
+g3
+ggsave(paste0(fig, "dbinom.png"), plot=g3, device="png", width=2, height=1.4, dpi=300)
+
 ```

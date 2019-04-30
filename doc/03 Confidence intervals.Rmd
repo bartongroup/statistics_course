@@ -85,6 +85,7 @@ P <- mclapply(1:nsim, function(i) {
     Mean = M,
     Median = median(x),
     `Standard deviation` = S,
+    IQR = IQR(x),
     `Median deviation` = mad(x),
     t = (M - mu) / SE,
     check.names = FALSE
@@ -98,7 +99,7 @@ lms <- list(
   Mean = c(10, 30),
   Median = c(10, 30),
   `Standard deviation` = c(0, 12),
-  `Median deviation` = c(0, 14),
+  IQR = c(0, 17),
   t = c(-6, 6)
 )
 
@@ -114,7 +115,7 @@ P <- lapply(colnames(sam.dist)[1:4], function(nm) {
 g <- plot_grid(P[[1]], P[[2]], P[[3]], P[[4]], ncol=2)
 g
  
-ggsave(paste0(fig, "sampling_distributions.png"), plot=g, device="png", width=5, height=5, dpi=300)
+ggsave(paste0(fig, "sampling_distributions.png"), plot=g, device="png", width=4, height=4, dpi=300)
 ```
 
 ```{r sampling_distribution_mean}
@@ -190,14 +191,26 @@ theme.d <- theme(
   axis.line.y = element_blank()
 )
 
-q <- qt(0.975, 6)
-g1 <- plotFun(dt, df=6, x.grid=seq(-5, 5, 0.01), cut.up = q) +
+q <- qt(0.975, 4)
+g1 <- plotFun(dt, df=4, x.grid=seq(-5, 5, 0.01), cut.up = q) +
   theme.d
 ggsave(paste0(fig, "dt.png"), plot=g1, device="png", width=2, height=1.4, dpi=300)
 
-g2 <- plotFun(dt, df=6, x.grid=seq(-5, 5, 0.01), cut.up = q, cut.lo = -q) +
+g2 <- plotFun(dt, df=4, x.grid=seq(-5, 5, 0.01), cut.up = q, cut.lo = -q) +
   theme.d
 ggsave(paste0(fig, "dt2.png"), plot=g2, device="png", width=2, height=1.4, dpi=300)
+
+d <- c(16.8, 21.8, 29.2, 23.3, 26.3)
+n <- length(d)
+M <- mean(d)
+SE <- sd(d) / sqrt(n)
+# critical t
+tc <- qt(0.975, df = n - 1)
+# lower confidence limit
+M - tc * SE
+# upper confidence limit
+M + tc * SE
+
 ```
 
 ```{r ci_vs_se}
