@@ -210,10 +210,15 @@ SE = sd(mass) / sqrt(n)
 t.obs = (M - 20) / SE
 dof <- length(mass) - 1
 
-lst <- tCut(t.obs, dof)
-ggsave(paste0(fig, "t_dist.png"), plot=lst$t, device="png", width=3, height=2.5, dpi=300)
-ggsave(paste0(fig, "t_dist_cut.png"), plot=lst$t.one, device="png", width=3, height=2.5, dpi=300)
-ggsave(paste0(fig, "t_dist_cut2.png"), plot=lst$t.two, device="png", width=3, height=2.5, dpi=300)
+
+g1 <- plotFun(dt, df=dof, x.grid=seq(-5,5,0.01), name="t")
+g2 <- plotFun(dt, df=dof, x.grid=seq(-5,5,0.01), cut.up=t.obs, name="t")
+g3 <- plotFun(dt, df=dof, x.grid=seq(-5,5,0.01), cut.lo=-t.obs, cut.up=t.obs, name="t")
+
+#lst <- tCut(t.obs, dof)
+ggsave(paste0(fig, "t_dist.png"), plot=g1, device="png", width=2.5, height=2, dpi=300)
+ggsave(paste0(fig, "t_dist_cut.png"), plot=g2, device="png", width=2.5, height=2, dpi=300)
+ggsave(paste0(fig, "t_dist_cut2.png"), plot=g3, device="png", width=2.5, height=2, dpi=300)
 
 ```
 
@@ -379,15 +384,28 @@ t.test(Scottish, English, var.equal = TRUE, alternative = "greater")
 t.test(Scottish, English, var.equal = FALSE, alternative = "greater")
 ```
 
+```{r eng_sco_mice, fig.width=2, fig.height=3}
+g <- plotMiceBox(mice, with.means=TRUE, with.boxes=FALSE, cex=1) 
+g
+
+ggsave(paste0(fig, "mouse_eng_sco.png"), plot=g, device="png", width=2.5, height=3.5, dpi=300) 
+```
+
 
 ```{r ttest_var, fig.width=3, fig.height=3}
-lst.eq <- tCut(t.obs=mice.prop$t.eq, mice.prop$nu.eq)
-lst.ne <- tCut(t.obs=mice.prop$t.ne, mice.prop$t.ne)
-lst.eq$t.one
-lst.ne$t.one
+#lst.eq <- tCut(t.obs=mice.prop$t.eq, mice.prop$nu.eq)
+#lst.ne <- tCut(t.obs=mice.prop$t.ne, mice.prop$nu.ne)
+#lst.eq$t.one
+#lst.ne$t.one
  
-ggsave(paste0(fig, "t_eq.png"), plot=lst.eq$t.one, device="png", width=3, height=2.5, dpi=300)
-ggsave(paste0(fig, "t_ne.png"), plot=lst.ne$t.one, device="png", width=3, height=2.5, dpi=300)
+g1 <- plotFun(dt, df=mice.prop$nu.eq, x.grid=seq(-5,5,0.01), cut.up = mice.prop$t.eq, name="t")
+g2 <- plotFun(dt, df=mice.prop$nu.ne, x.grid=seq(-5,5,0.01), cut.up = mice.prop$t.ne, name="t")
+
+g1
+g2
+
+ggsave(paste0(fig, "t_eq.png"), plot=g1, device="png", width=2.5, height=2, dpi=300)
+ggsave(paste0(fig, "t_ne.png"), plot=g2, device="png", width=2.5, height=2, dpi=300)
 ```
 
 
@@ -429,6 +447,57 @@ dat1 <- generateEffectP(8, 0.02)
 dat2 <- generateEffectP(100, 0.02)
 ```
 
+
+```{r, generate_p_ci}
+set.seed(221)
+done <- FALSE
+n <- 12
+while(!done) {
+  x1 <- rnorm(n, 20, 5)
+  x2 <- rnorm(n, 24, 5)
+  p <- t.test(x1, x2)$p.value
+  done <- abs(p - 0.05) < 1e-5 & abs(sd(x1) - sd(x2)) < 0.2
+}
+m1 <- mean(x1)
+m2 <- mean(x2)
+
+ci1 <- t.test(x1)$conf.int
+ci1 <- (ci1[2] - ci1[1]) / 2
+ci2 <- t.test(x2)$conf.int
+ci2 <- (ci2[2] - ci2[1]) / 2
+```
+
+```{r p_ci}
+d <- data.frame(
+  x = c(rep("A", n), rep("B", n)),
+  y = c(x1, x2)
+)
+dm <- data.frame(
+  x = c("A", "B"),
+  y = c(m1, m2),
+  s = c(ci1, ci2)
+)
+dm$i <- c(1.4, 1.6)
+
+g <- ggplot() +
+  theme_classic() +
+  theme(legend.position = "none") +
+  geom_beeswarm(data=d, aes(x=x, y=y, fill=x), shape=21, cex=2) +
+  geom_errorbar(data=dm, aes(x=i, ymin=y-s, ymax=y+s), width=0.1, colour="grey50") +
+  geom_errorbar(data=dm, aes(x=i, ymin=y-s/sqrt(2), ymax=y+s/sqrt(2)), width=0.1) +
+  geom_point(data=dm, (aes(x=i, y=y, fill=x)), shape=22, size=2) +
+  labs(x=NULL, y="Mass (g)") +
+  scale_fill_manual(values=cbPalette)
+
+
+g
+
+ggsave(paste0(fig, "ttest2_p_ci.png"), plot=g, device="png", width=4, height=3, dpi=300)
+```
+
+
+
+
 ```{r plot_mice}
 plotMice <- function(dat) {
   d <- data.frame(
@@ -448,8 +517,17 @@ plotMice <- function(dat) {
 ```
 
 ```{r plot_effect_pvalue}
-g1 <- plotMice(dat1)
-g2 <- plotMice(dat2)
+mkDat <- function(dat) {
+ data.frame(
+    Country = c(rep("English", length(dat$x1)), rep("Scottish", length(dat$x2))),
+    Mass = c(dat$x1, dat$x2)
+  )
+}
+
+lms <- c(0, 40)
+ 
+g1 <- plotMiceBox(mkDat(dat1), cex=2.5, size=1, limits=lms)
+g2 <- plotMiceBox(mkDat(dat2), cex=2.5, size=1, limits=lms)
 
 g <- plot_grid(g1, g2, ncol=2)
 g

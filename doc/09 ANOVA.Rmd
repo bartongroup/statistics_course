@@ -61,27 +61,14 @@ mice2$Colour <- factor(mice2$Colour, levels=c("White", "Black"))
 ```
 
 ```{r plot_mice_box_function}
-plotMiceBox <- function(mice, seed=111, limits=NULL) {
-  set.seed(seed)
-  g <- ggplot(mice, aes(x=Country, y=Mass)) +
-    theme_classic() +
-    theme(legend.position = "none") +
-    geom_boxplot(aes(fill=Country), alpha=0.5, colour="grey50", outlier.shape = NA) +
-    scale_fill_manual(values=british.palette) +
-    #geom_jitter(width=0.15, height=0) +
-    geom_beeswarm(cex=2, size=1.5, shape=21, fill="grey20") +
-    labs(x="", y="Body mass (g)")
-  if(!is.null(limits)) g <- g + ylim(limits)
-  g
-}
 ```
 
 
 ```{r mice_1way_plot, fig.width=4, fig.height=3}
-g <- plotMiceBox(mice1) 
-g 
+g <- plotMiceBox(mice1, cex=2.6) 
+g
 
-ggsave(paste0(fig, "mice_1way.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "mice_1way.png"), plot=g, device="png", width=3.2, height=3.2, dpi=300)
 ```
 
 
@@ -199,8 +186,8 @@ g1 <- plotVariance(mice1, means, within=TRUE)
 g2 <- plotVariance(mice1, means, within=FALSE)
 g1 
 g2 
-ggsave(paste0(fig, "variance_within.png"), plot=g1, device="png", width=4.5, height=4, dpi=300)
-ggsave(paste0(fig, "variance_between.png"), plot=g2, device="png", width=4.5, height=4, dpi=300)
+ggsave(paste0(fig, "variance_within.png"), plot=g1, device="png", width=3.3, height=3, dpi=300)
+ggsave(paste0(fig, "variance_between.png"), plot=g2, device="png", width=3.3, height=3, dpi=300)
 ```
 
 ```{r f_dist_generate}
@@ -242,22 +229,27 @@ res
 ```
 
 ```{r plot_no_effect, fig.width=4, fig.height=3}
-g <- plotMiceBox(dat)
-g
+g1 <- plotMiceBox(mice1, cex=2.6, limits=c(0,40))
+g1
 
-ggsave(paste0(fig, "mice_1way_no_effect.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "mice_1way_effect.png"), plot=g1, device="png", width=3.2, height=3.2, dpi=300)
+
+g2 <- plotMiceBox(dat, cex=2.6, limits=c(0,40)) 
+g2
+
+ggsave(paste0(fig, "mice_1way_no_effect.png"), plot=g2, device="png", width=3.2, height=3.2, dpi=300)
 ```
 
 
 
 ```{r mice_colour, fig.width=4, fig.height=3}
-g1 <- plotMiceBox(subset(mice2, Colour=="White"), limits=c(0,42))
-g2 <- plotMiceBox(subset(mice2, Colour=="Black"), limits=c(0,42))
+g1 <- plotMiceBox(subset(mice2, Colour=="White"), limits=c(0,42), cex=2.6)
+g2 <- plotMiceBox(subset(mice2, Colour=="Black"), limits=c(0,42), cex=2.6)
 g1
 g2
 
-ggsave(paste0(fig, "mice_white.png"), plot=g1, device="png", width=3.5, height=3.5, dpi=300)
-ggsave(paste0(fig, "mice_black.png"), plot=g2, device="png", width=3.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "mice_white.png"), plot=g1, device="png", width=3.2, height=3.2, dpi=300)
+ggsave(paste0(fig, "mice_black.png"), plot=g2, device="png", width=3.2, height=3.2, dpi=300)
 ```
 
 ```{r read_time_course}

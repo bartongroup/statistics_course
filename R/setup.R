@@ -147,3 +147,33 @@ plotFun <- function(FUN, ..., x.grid, cut.lo=NULL, cut.up=NULL, name="") {
 se <- function(x) {
   sd(x, na.rm=TRUE) / sqrt(length(x))
 }
+
+
+plotMiceBox <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=4, size=2, m.width=0.3,
+                        with.means=TRUE, with.boxes=FALSE, with.shape=FALSE) {
+  g <- ggplot() +
+    theme_classic() +
+    theme(legend.position = "none") +
+    scale_fill_manual(values=british.palette) +
+    labs(x="", y=ylab)
+  
+  if(!is.null(limits)) g <- g + scale_y_continuous(limits=limits, expand=c(0,0))
+
+  if(with.boxes) {
+    g <- g + geom_boxplot(data=d, aes_string(x="Country", y=what, fill="Country"), alpha=0.4, colour="grey60", outlier.shape = NA)
+  }
+  if(with.shape) {
+    g <- g + 
+      geom_beeswarm(data=d, aes_string(x="Country", y=what, fill="Country", shape="Country"), cex=cex, size=size, priority = "density") +
+      scale_shape_manual(values=21:24)
+  } else {
+    g <- g + geom_beeswarm(data=d, aes_string(x="Country", y=what, fill="Country"), shape=21, cex=cex, size=size, priority = "density")
+  }
+  if(with.means) {
+    m <- d %>% group_by(Country) %>% summarise(M = mean(!!sym(what))) %>% mutate(i=as.integer(as.factor(Country)))
+    #g <- g + geom_boxplot(data=m, aes(x=Country, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="grey40")
+    g <- g + geom_segment(data=m, aes(x=i-m.width, xend=i+m.width, y=M, yend=M), size=0.9, colour="grey30", lineend="round")
+  }
+  g
+}
+

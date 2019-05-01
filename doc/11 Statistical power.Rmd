@@ -43,27 +43,6 @@ countries <- c("English", "Scottish", "Welsh", "N.Irish")
 
 
 ```{r plot_mice_box_function}
-plotMiceBox <- function(mice, seed=111, limits=NULL, cex=4, size=2, with.means=FALSE, with.boxes=TRUE) {
-  set.seed(seed)
-  g <- ggplot() +
-    theme_classic() +
-    theme(legend.position = "none") +
-    scale_fill_manual(values=british.palette) +
-    geom_beeswarm(data=mice, aes(x=Country, y=Mass, fill=Country), shape=21, cex=cex, size=size, priority = "density") +
-    labs(x="", y="Body mass (g)")
-  if(!is.null(limits)) g <- g + ylim(limits)
-  
-  if(with.means) {
-    m <- mice %>% group_by(Country) %>% summarise(M = mean(Mass))
-    g <- g + geom_boxplot(data=m, aes(x=Country, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="grey40")
-  }
-  
-  if(with.boxes) {
-    g <- g + geom_boxplot(data=mice, aes(x=Country, y=Mass, fill=Country), alpha=0.4, colour="grey60", outlier.shape = NA)
-  }
-  
-  g
-}
 ```
 
 
@@ -262,14 +241,14 @@ d <- rbind(d1, d2)
 y1 <- min(d$Mass)
 y2 <- max(d$Mass)
 
-g1 <- plotMiceBox(d1, size=1.5, cex=2, with.boxes=FALSE, with.means=TRUE) + ylim(y1, y2)
-g2 <- plotMiceBox(d2, size=1.5, cex=2, with.boxes=FALSE, with.means=TRUE) + ylim(y1, y2)
+g1 <- plotMiceBox(d1, size=1.5, cex=2.6, with.boxes=FALSE, with.means=TRUE) + ylim(y1, y2)
+g2 <- plotMiceBox(d2, size=1.5, cex=2.6, with.boxes=FALSE, with.means=TRUE) + ylim(y1, y2)
 
 g1
 g2
 
-ggsave(paste0(fig, "anova_f1_1.png"), plot=g1, device="png", width=3.5, height=3.5, dpi=300)
-ggsave(paste0(fig, "anova_f1_2.png"), plot=g2, device="png", width=3.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "anova_f1_1.png"), plot=g1, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "anova_f1_2.png"), plot=g2, device="png", width=3, height=3, dpi=300)
 
 ```
 

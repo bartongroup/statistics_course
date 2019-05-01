@@ -58,15 +58,8 @@ mice <- read.table("../data/mice_2samples.txt", header=TRUE)
 
 
 ```{r eng_sco_mice, fig.width=2, fig.height=3}
-set.seed(111)
-g <- ggplot(mice, aes(x=Country, y=Mass)) +
-  theme_classic() +
-  theme(legend.position = "none") +
-  geom_boxplot(aes(fill=Country), alpha=0.5, colour="grey50", outlier.shape = NA) +
-  scale_fill_manual(values=british.palette) +
-  #geom_jitter(width=0.15, height=0) +
-  geom_beeswarm(cex=2.5, size=1) +
-  labs(x="", y="Body mass (g)")
+g <- plotMiceBox(mice, with.means=TRUE, with.boxes=FALSE, cex=1) 
+
 g
 
 ggsave(paste0(fig, "mouse_eng_sco.png"), plot=g, device="png", width=2.1, height=3.5, dpi=300) 

@@ -563,21 +563,6 @@ lifespan4$Country <- factor(lifespan4$Country, levels=countries)
 
 
 ```{r plot_mice_box_function}
-plotMiceBox <- function(mice, what="Lifespan", ylab="Lifespan (day)", seed=111, limits=NULL, width=0.15, cex=4, size=2, withbox=TRUE, palette=british.palette) {
-  set.seed(seed)
-  g <- ggplot(mice, aes_string(x="Country", y=what)) +
-    theme_classic() +
-    theme(legend.position = "none")
-  if(withbox) g <- g + geom_boxplot(aes(fill=Country), alpha=0.4, outlier.shape=NA, colour="grey70")
-  g <- g +
-    scale_fill_manual(values=palette) +
-    #geom_jitter(width=width, height=0) +
-    geom_beeswarm(cex=cex, size=size, aes(fill=Country), shape=21, priority="density") +
-    labs(x="", y=ylab)
-  if(!is.null(limits)) g <- g + ylim(limits)
-  g
-}
-
 rankPlot <- function(mice) {
   mice <- mice %>% group_by(Rank) %>% mutate(idx = row_number(Rank)) %>% as.data.frame
   labsi <- c(1, seq(5,40,5))
@@ -600,12 +585,17 @@ rankPlot <- function(mice) {
 ```
 
 ```{r anova_rank_plot, fig.width=5, fig.height=3}
-g1 <- plotMiceBox(lifespan4) 
-g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank", width=0, cex=3.1)
+labsi <- c(1, seq(5,40,5))
+labs <- rep("", 40)
+labs[labsi] <- labsi
 
-g <- plot_grid(g1, g2, ncol=2)
-g
-ggsave(paste0(fig, "anova_kruskal.png"), plot=g, device="png", width=5, height=3, dpi=300)
+g1 <- plotMiceBox(lifespan4, what="Lifespan", ylab="Lifespan (days)", cex=3.1, with.shape=TRUE)
+g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank", cex=3.1, with.shape=TRUE) +
+  scale_y_continuous(breaks=1:40, labels=labs)
+
+g <- plot_grid(g1, g2, ncol=2) 
+g 
+ggsave(paste0(fig, "anova_kruskal.png"), plot=g, device="png", width=6, height=3.5, dpi=300)
 ```
 
 ```{r rank_plot_4mice, fig.width=3, fig.height=0.3}
@@ -614,14 +604,15 @@ ls2$Country <- ls2$Condition
 ls2$Country <- gsub("WT", "English", ls2$Country)
 ls2$Country <- gsub("KO", "Scottish", ls2$Country)
 ls2$Rank <- rank(ls2$Lifespan, ties.method="random")
-g2.1 <- plotMiceBox(ls2, cex=5, size=1.5)
-g2.2 <- plotMiceBox(ls2, size=1.5, what="Rank", ylab="Rank", width=0)
-g0 <- plot_grid(g2.1, g2.2, ncol=2)
-
+g2.1 <- plotMiceBox(ls2, cex=5, size=2, what="Lifespan", ylab="Lifespan (days)")
+g2.2 <- plotMiceBox(ls2, size=2, what="Rank", ylab="Rank") +
+  scale_y_continuous(expand=c(0,0), limits=c(0,nrow(ls2)+1), breaks=1:nrow(ls2))
+g0 <- plot_grid(g2.1, g2.2, ncol=2) 
+ 
 g1 <- rankPlot(ls2) 
 g2 <- rankPlot(lifespan4) + scale_y_continuous(expand=c(0,0.6))
   
-ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3.5, height=3.5, dpi=300)
 
 ggsave(paste0(fig, "mice2_rank.png"), plot=g1, device="png", width=3, height=0.7, dpi=300)
 ggsave(paste0(fig, "mice4_rank.png"), plot=g2, device="png", width=5, height=0.95, dpi=300)
@@ -993,3 +984,16 @@ g <- ksp$g2 +
 ggsave(paste0(fig, "ks_dist_33.png"), plot=g, device="png", width=3, height=2.5, dpi=300)
 
 ```
+
+```{r test_comparison}
+g1 <- plotMiceBox(droplevels(subset(ls4, Country %in% c("English", "Scottish"))), what="Lifespan", ylab="Lifespan (days)", cex=3.6)
+g1
+
+g2 <- plotMiceBox(droplevels(subset(ls4, Country %in% c("English", "N.Irish"))), what="Lifespan", ylab="Lifespan (days)", cex=3.6)
+g2
+
+ggsave(paste0(fig, "tests_1.png"), plot=g1, device="png", width=2.5, height=2.5, dpi=300)
+ggsave(paste0(fig, "tests_2.png"), plot=g2, device="png", width=2.5, height=2.5, dpi=300)
+
+```
+
