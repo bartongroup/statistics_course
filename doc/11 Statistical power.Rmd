@@ -419,7 +419,7 @@ ggsave(paste0(fig, "t_power_5dist.png"), plot=g, device="png", width=4, height=5
 
 
 ```{r t_power_curve_5, fig.width=3, fig.height=3}
-tPowerCurve <- function(n=seq(2,10,1), delta=seq(-10, 10, 0.1)) {
+tPowerCurve <- function(n=seq(2,10,1), delta=seq(-10, 10, 0.02)) {
   D <- data.frame()
   for(i in n) {
     for(s in delta) {
@@ -453,24 +453,25 @@ g <- ggplot(pow, aes(delta, power)) +
   theme_classic() +
   geom_line(colour="red") +
   labs(x="Effect size", y="Power") +
+  scale_y_continuous(breaks=seq(0,1,0.2), expand=c(0,0), limits=c(0, 1.05)) +
   xlim(c(-6,6))
 g
 
-ggsave(paste0(fig, "t_power_5.png"), plot=g, device="png", width=3, height=3, dpi=300)
+#ggsave(paste0(fig, "t_power_5.png"), plot=g, device="png", width=3, height=3, dpi=300)
 ```
 
 
 ```{r plot_power_func}
-plotPowerCurves <- function(pow, xlim=c(-6, 6)) {
+plotPowerCurves <- function(pow, xlim=c(-6, 6), with.hline=TRUE, x.breaks=waiver()) {
   g <- ggplot(pow, aes(delta, power, group=n)) +
     theme_classic() +
-    geom_line(aes(colour=n)) +
+    geom_line(aes(colour=n), size=0.7) +
     labs(x="Effect size", y="Power") +
-    xlim(xlim) +
+    scale_x_continuous(limits=xlim, expand=c(0,0), breaks=x.breaks) +
     scale_colour_manual(values=cbPalette) +
-    scale_y_continuous(breaks=seq(0,1,0.2)) +
-    theme(legend.position = "none") +
-    geom_hline(yintercept = 0.8, linetype="dashed")
+    scale_y_continuous(breaks=seq(0,1,0.2), expand=c(0,0), limits=c(0, 1.05)) +
+    theme(legend.position = "none")
+  if(with.hline) g <- g + geom_hline(yintercept = 0.8, linetype="dashed")
   g
 }
 
@@ -488,13 +489,20 @@ plotPowerSize <- function(pow) {
 
 
 ```{r t_power_curves, fig.width=3, fig.height=3}
+pow5 <- tPowerCurve(n=5)
+pow5$n <- as.factor(pow5$n)
+
 pow <- tPowerCurve(n=c(2, 3, 5, 10, 30))
 pow$n <- factor(pow$n, levels=c(2, 3, 5, 10, 30))
 
-g <- plotPowerCurves(pow)
-g 
+g1 <- plotPowerCurves(pow5, with.hline = FALSE, xlim=c(-6,6), x.breaks = seq(-6,6,2))
+g1
+
+g2 <- plotPowerCurves(pow, xlim=c(-6,6), x.breaks = seq(-6,6,2))
+g2
  
-ggsave(paste0(fig, "t_power_curves.png"), plot=g, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "t_power_curve_5.png"), plot=g1, device="png", width=3, height=3, dpi=300)
+ggsave(paste0(fig, "t_power_curves.png"), plot=g2, device="png", width=3, height=3, dpi=300)
 
 spow <- sPowerCurve(power=c(0.6, 0.8, 0.95))
 spow$power <- factor(spow$power, levels=c(0.6, 0.8, 0.95))
@@ -506,7 +514,7 @@ ggsave(paste0(fig, "t_size_curves.png"), plot=g, device="png", width=3, height=3
 
 
 ```{r anova_power_curve_5}
-anovaPowerCurve <- function(n=seq(2,10,1), f=seq(0, 10, 0.1), k=4) {
+anovaPowerCurve <- function(n=seq(2,10,1), f=seq(0, 5, 0.01), k=4) {
   D <- data.frame()
   for(i in n) {
     for(s in f) {
@@ -537,10 +545,10 @@ anovaSizeCurve <- function(n=seq(2,50,1), power=c(0.6, 0.8, 0.95), k=4) {
 
 
 ```{r anova_power_curves, fig.width=3, fig.height=3}
-pow <- anovaPowerCurve(n=c(2, 3, 5, 10, 30))
+pow <- anovaPowerCurve(n=c(2, 3, 5, 10, 30)) 
 pow$n <- factor(pow$n, levels=c(2, 3, 5, 10, 30))
-
-g <- plotPowerCurves(pow, xlim=c(0,3))
+ 
+g <- plotPowerCurves(pow, xlim=c(0,3), x.breaks = 0:3)
 g 
  
 ggsave(paste0(fig, "anova_power_curves.png"), plot=g, device="png", width=3, height=3, dpi=300)
@@ -586,6 +594,8 @@ g1 <- ggplot() +
     theme_classic() +
     theme(legend.position = "none") +
     #geom_boxplot(alpha=0.5, outlier.shape = NA) +
+    scale_x_discrete() +
+    geom_vline(xintercept = 1:5, colour="grey90", size=0.3) +
     geom_boxplot(data=sdt, aes(x=Group, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="grey40") +
     scale_fill_manual(values=cbPalette) +
     geom_beeswarm(data=tumour, aes(x=Group, y=Volume, fill=Group), shape=21, cex=2.5, size=1.5) +

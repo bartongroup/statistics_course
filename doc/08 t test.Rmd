@@ -449,50 +449,72 @@ dat2 <- generateEffectP(100, 0.02)
 
 
 ```{r, generate_p_ci}
-set.seed(221)
-done <- FALSE
-n <- 12
-while(!done) {
-  x1 <- rnorm(n, 20, 5)
-  x2 <- rnorm(n, 24, 5)
-  p <- t.test(x1, x2)$p.value
-  done <- abs(p - 0.05) < 1e-5 & abs(sd(x1) - sd(x2)) < 0.2
+genSD <- function(n, M, S, eps=1e-3) {
+  repeat{
+    x <- rnorm(n, 0, S)
+    if(abs(sd(x) - S) < eps) break
+  }
+  x <- x - mean(x) + M
+  x
 }
-m1 <- mean(x1)
-m2 <- mean(x2)
 
-ci1 <- t.test(x1)$conf.int
-ci1 <- (ci1[2] - ci1[1]) / 2
-ci2 <- t.test(x2)$conf.int
-ci2 <- (ci2[2] - ci2[1]) / 2
+set.seed(225)
+n <- 8
+S <- 5
+x1 <- genSD(n, 20, S)
+x <- genSD(n, 20, S)
+tc <- qt(0.975, n - 1)
+CI <- tc * S / sqrt(n)
+x2 <- x + 2 * CI
+
+# find delta M to give p = 0.05
+err <- function(dm) (t.test(x1, x+dm)$p.value - 0.05)^2
+opt <- optim(5, err)
+x3 <- x + opt$par
 ```
 
 ```{r p_ci}
-d <- data.frame(
-  x = c(rep("A", n), rep("B", n)),
-  y = c(x1, x2)
-)
-dm <- data.frame(
-  x = c("A", "B"),
-  y = c(m1, m2),
-  s = c(ci1, ci2)
-)
-dm$i <- c(1.4, 1.6)
+plotCI <- function(x1, x2) {
+  n <- length(x1)
+  m1 <- mean(x1)
+  m2 <- mean(x2)
+  tc <- qt(0.975, n - 1)
+  ci1 <- tc * sd(x1) / sqrt(n)
+  ci2 <- tc * sd(x2) / sqrt(n)
+  
+  d <- data.frame(
+    x = c(rep("A", n), rep("B", n)),
+    y = c(x1, x2)
+  )
+  dm <- data.frame(
+    x = c("A", "B"),
+    y = c(m1, m2),
+    s = c(ci1, ci2)
+  )
+  dm$i <- c(1.4, 1.6)
+  
+  p <- t.test(x1, x2, var.equal = TRUE)$p.value
+  p <- sprintf("%.2g", p)
+  
+  g <- ggplot() +
+    theme_classic() +
+    theme(legend.position = "none") +
+    geom_beeswarm(data=d, aes(x=x, y=y, fill=x), shape=21, cex=2.6) +
+    geom_errorbar(data=dm, aes(x=i, ymin=y-s, ymax=y+s), width=0.1, colour="grey50") +
+    #geom_errorbar(data=dm, aes(x=i, ymin=y-s/sqrt(2), ymax=y+s/sqrt(2)), width=0.1) +
+    geom_point(data=dm, (aes(x=i, y=y, fill=x)), shape=22, size=2) +
+    labs(x=NULL, y="Mass (g)", title=paste0("p = ", p)) +
+    scale_fill_manual(values=cbPalette)
+  g
+}
 
-g <- ggplot() +
-  theme_classic() +
-  theme(legend.position = "none") +
-  geom_beeswarm(data=d, aes(x=x, y=y, fill=x), shape=21, cex=2) +
-  geom_errorbar(data=dm, aes(x=i, ymin=y-s, ymax=y+s), width=0.1, colour="grey50") +
-  geom_errorbar(data=dm, aes(x=i, ymin=y-s/sqrt(2), ymax=y+s/sqrt(2)), width=0.1) +
-  geom_point(data=dm, (aes(x=i, y=y, fill=x)), shape=22, size=2) +
-  labs(x=NULL, y="Mass (g)") +
-  scale_fill_manual(values=cbPalette)
+g1 <- plotCI(x1, x2)
+g2 <- plotCI(x1, x3)
 
-
+g <- plot_grid(g1, g2, nrow=1)
 g
 
-ggsave(paste0(fig, "ttest2_p_ci.png"), plot=g, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "ttest2_p_ci.png"), plot=g, device="png", width=6, height=3, dpi=300)
 ```
 
 

@@ -578,7 +578,7 @@ rankPlot <- function(mice) {
       legend.position = "none"
     ) +
     scale_fill_manual(values=british.palette) +
-    scale_x_continuous(breaks=1:40, labels=labs) +
+    scale_x_continuous(breaks=1:40, labels=labs, limits=c(0.5, max(mice$Rank)+0.5), expand=c(0,0)) +
     scale_shape_manual(values=21:24) +
     labs(x = "Rank", y="")
 }
@@ -592,27 +592,27 @@ labs[labsi] <- labsi
 g1 <- plotMiceBox(lifespan4, what="Lifespan", ylab="Lifespan (days)", cex=3.1, with.shape=TRUE)
 g2 <- plotMiceBox(lifespan4, what="Rank", ylab="Rank", cex=3.1, with.shape=TRUE) +
   scale_y_continuous(breaks=1:40, labels=labs)
-
+ 
 g <- plot_grid(g1, g2, ncol=2) 
 g 
 ggsave(paste0(fig, "anova_kruskal.png"), plot=g, device="png", width=6, height=3.5, dpi=300)
 ```
 
-```{r rank_plot_4mice, fig.width=3, fig.height=0.3}
-ls2 <- lifespan 
-ls2$Country <- ls2$Condition
-ls2$Country <- gsub("WT", "English", ls2$Country)
-ls2$Country <- gsub("KO", "Scottish", ls2$Country)
+```{r rank_plot_4mice, fig.width=3, fig.height=3}
+ls2 <- subset(lifespan4, Country %in% c("English", "Scottish"))
 ls2$Rank <- rank(ls2$Lifespan, ties.method="random")
-g2.1 <- plotMiceBox(ls2, cex=5, size=2, what="Lifespan", ylab="Lifespan (days)")
-g2.2 <- plotMiceBox(ls2, size=2, what="Rank", ylab="Rank") +
+g2.1 <- plotMiceBox(ls2, cex=7, size=2, what="Lifespan", ylab="Lifespan (days)", with.shape=TRUE)
+g2.2 <- plotMiceBox(ls2, size=2, what="Rank", ylab="Rank", with.shape=TRUE) +
   scale_y_continuous(expand=c(0,0), limits=c(0,nrow(ls2)+1), breaks=1:nrow(ls2))
 g0 <- plot_grid(g2.1, g2.2, ncol=2) 
+g0
  
 g1 <- rankPlot(ls2) 
 g2 <- rankPlot(lifespan4) + scale_y_continuous(expand=c(0,0.6))
-  
-ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3.5, height=3.5, dpi=300)
+g1
+g2
+
+ggsave(paste0(fig, "value_rank.png"), plot=g0, device="png", width=3.3, height=3.5, dpi=300)
 
 ggsave(paste0(fig, "mice2_rank.png"), plot=g1, device="png", width=3, height=0.7, dpi=300)
 ggsave(paste0(fig, "mice4_rank.png"), plot=g2, device="png", width=5, height=0.95, dpi=300)
