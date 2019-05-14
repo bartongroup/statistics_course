@@ -416,22 +416,21 @@ ggsave(paste0(fig, "median.png"), plot=g, device="png", width=2.5, height=2.5, d
 set.seed(987)
 n <- 5
 nsim <- 1000000
-npar <- 6
+npar <- 8
 ns <- nsim / npar
 mu <- 20 
 sigma <- 5
 P <- mclapply(1:npar, function(i) {
-  d <- lapply(1:ns, function(k) {
+  d <- matrix(nrow=ns, ncol=2)
+  for(k in 1:ns) {
     x <- rnorm(n, mu, sigma)
-    data.frame(
-      Mean = mean(x),
-      Median = median(x)
-    )
-  })
-  do.call(rbind, d)
+    d[k, ] <- c(mean(x), median(x))
+  }
+  d <- setNames(data.frame(d), c("Mean", "Median"))
 }, mc.cores=npar)
 sam.dist <- do.call(rbind, P)
 ```
+
 
 ```{r mean_median_sampling}
 sd(sam.dist$Mean) 

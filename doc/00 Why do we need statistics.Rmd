@@ -1,0 +1,239 @@
+---
+title: "Why do we need statistics"
+output:
+  html_document:
+    css: tabbed_notebook.css
+    fig_width: 3
+    fig_height: 3
+params: 
+  output_dir: "../output"
+---
+
+```{r setup, echo=FALSE}
+root <- "00_why_statistics"
+source("../R/setup.R")
+library(beeswarm)
+library(tidyverse)
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  cache.path = paste0("../cache/", root),
+  fig.path = paste0("../cache/", root)
+)
+fig <- paste0("../fig/", root, "/")
+if(!dir.exists(fig)) dir.create(fig)
+```
+
+```{css echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r read_grna}
+X1 <- read.table("../data/WT_lev.tsv", sep="\t")
+genes <- X1[, 1]
+X1 <- X1[, -1]
+colnames(X1) <- paste0("WT_", 1:ncol(X1))
+X1 <- X1[, -c(21,22,25,28,34,36)]
+X2 <- read.table("../data/Snf2_lev.tsv", sep="\t")
+X2 <- X2[, -1]
+colnames(X2) <- paste0("Snf2_", 1:ncol(X2))
+X2 <- X2[, -c(6,13,25,35)]
+grna <- data.frame(X1, X2)
+rownames(grna) <- genes
+```
+
+
+
+```{r grna_gene, fig.width=3, fig.height=3}
+plotGene <- function(gene, sel=NULL, p.alpha=1) {
+  m <- melt(grna[gene,])
+  lims <- c(min(m$value), max(m$value))
+  if(!is.null(sel)) m <- m[m$variable %in% sel,]
+  m$condition <- as.factor(gsub("_\\d+", "", m$variable, perl=TRUE))
+  m$condition <- relevel(m$condition, "WT")
+  if(is.null(sel)) print(t.test(value~condition, data=m))
+  
+  mm <- m %>% group_by(condition) %>% summarise(M=mean(value), SD=sd(value), n=n()) %>% mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
+  print(mm)
+  mm$i <- c(1.3, 1.7)
+  
+  g <- ggplot() +
+    theme_classic() +
+    theme(
+      legend.position = "none"
+    ) +
+    #geom_boxplot(alpha=0.3, colour="grey70", outlier.shape = NA) +
+    scale_fill_manual(values=cbPalette) +
+    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
+    labs(x=NULL, y="Read count") +
+    scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
+    ylim(lims)
+  if(is.null(sel)) {
+    g <- g +
+      geom_errorbar(data=mm, aes(x=i, ymin=M-CI, ymax=M+CI), width=0.15) +
+      geom_point(data=mm, aes(x=i, y=M, fill=condition), size=3, shape=22)
+  }
+  g
+}
+
+gene <- "yfr017c"
+sort(grna[gene, ])
+
+g1 <- plotGene(gene)
+g1
+
+g2 <- plotGene(gene, p.alpha=0.3)
+g2
+
+ggsave(paste0(fig, "grna_expression_1.png"), plot=g1, device="png", width=2.1, height=3.5, dpi=300) 
+ggsave(paste0(fig, "grna_expression_2.png"), plot=g2, device="png", width=2.6, height=3.5, dpi=300) 
+```
+
+
+```{r poisson_plates}
+set.seed(223)
+p <- rnbinom(8, mu=20, size=5)
+p <- c(10, 30, p)
+d <- data.frame(plate=seq_along(p), cnt = p)
+
+g1 <- ggplot(d, aes(plate, cnt)) +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(colour="grey80")) +
+  #geom_segment(aes(x=plate, xend=plate, y=cnt, yend=0), colour="grey80") +
+  geom_point(shape=22, fill=fill.colour) +
+  scale_x_continuous(breaks=1:10) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, max(p) * 1.3)) +
+  labs(x="Plate", y="Count")
+g1
+ggsave(paste0(fig, "poisson_plates.png"), plot=g1, device="png", width=3, height=3, dpi=300)
+```
+
+```{r body_temperature}
+# data from Shoemaker A. L.,  College C., Journal of Statistics Education 4 (1996)
+blood <- read.table("../data/normtemp.dat.txt", header=FALSE)
+names(blood) <- c("temperature.f", "sex", "hrate")
+blood$temperature.c <- (blood$temperature.f - 32) *5 / 9
+
+M <- mean(blood$temperature.c)
+S <- sd(blood$temperature.c)
+x <- seq(35,39,0.01)
+m <- data.frame(
+  x = x,
+  y = dnorm(x, mean=M, sd=S)
+)
+
+g1 <- ggplot(blood, aes(x=temperature.c, y=1)) +
+  theme_classic() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = margin(t=-2,r=6,l=3)
+  ) +
+  geom_beeswarm(groupOnX = FALSE, cex=1, size=0.8, shape=21, fill=fill.colour) +
+  scale_x_continuous(expand=c(0,0), limits=c(35, 39)) +
+  scale_y_continuous(expand=c(0.1,0)) +
+  labs(x=expression(Body~temperature~(degree*C)))
+  
+brks <- seq(35,39,0.2)
+g2 <- ggplot() +
+  theme_classic() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    plot.margin = margin(b=0,r=6,t=10,l=3)
+  ) +
+  geom_histogram(data=blood, aes(x=temperature.c, y=..density..), breaks=brks, fill=fill.colour) +
+  geom_outline(blood$temperature.c, breaks=brks) +
+  geom_line(data=m, aes(x,y), colour="brown3") +
+  scale_y_continuous(expand=c(0,0), limits=c(0,1.2), breaks=seq(0.2,1.2,0.2)) +
+  scale_x_continuous(expand=c(0,0), limits=c(35, 39)) +
+  labs(x=NULL, y="Density")
+
+
+g <- plot_grid(g2, g1, ncol=1, align="v", rel_heights = c(3,1))
+g
+ggsave(paste0(fig, "body_temp.png"), plot=g, device="png", width=3.5, height=3.5, dpi=300)
+
+```
+
+
+```{r tumour_growth_read_data}
+ptpn <- read_tsv("../data/tumour_ptpn.txt") %>%
+  mutate(day = as.numeric(gsub("day", "", X1))) %>%
+  select(-1)
+names(ptpn) <- c(paste0("KO_", 1:12), paste0("WT_", 1:12), "day")
+
+ptpn <- ptpn %>%
+  gather("sample", "volume", -day) %>%
+  separate("sample", c("condition", "replicate"), "_", remove=FALSE) %>%
+  filter(!is.na(volume) & volume > 0)
+
+m <- ptpn %>%
+  group_by(condition, day) %>%
+  summarise(M = mean(volume), SE = sd(volume) / sqrt(n()))
+
+lp <- ptpn %>%
+  mutate(lvolume = log10(volume), lday=log10(day))
+```
+
+
+```{r plot_tumour_lines, fig.width=8}
+y.lims <- c(0.3, 1300)
+d.brks <- 1:21
+d.labs <- rep("", length(d.brks))
+d.labs[c(5, 10, 20)] <- c(5, 10, 20)
+t.size <- 9
+
+g1 <- ggplot(ptpn, aes(x=day, y=volume, group=sample, colour=condition)) +
+    theme_classic() +
+    geom_line() +
+    labs(x="Day", y=expression(Tumor~volume~(mm^3)), title="Raw data") +
+    scale_x_log10() +
+    scale_y_log10(expand=c(0,0), limits=y.lims) +
+    scale_colour_manual(values=cbPalette) +
+    theme(legend.position = "none", plot.title=element_text(size=t.size))
+
+g2 <- ggplot(m) +
+  theme_classic() +
+  geom_line(aes(x=day, y=M, colour=condition)) +
+  geom_ribbon(aes(x=day, ymin=M-SE, ymax=M+SE, fill=condition), alpha=0.3) +
+  scale_x_log10() +
+  scale_y_log10(expand=c(0,0), limits=y.lims) +
+  scale_colour_manual(values=cbPalette) +
+  scale_fill_manual(values=cbPalette) +
+  labs(x="Day", y=NULL, title="Mean and standard error") +
+  theme(legend.position = "none", plot.title=element_text(size=t.size))
+
+
+g3 <- ggplot(lp, aes(x=lday, y=lvolume, colour=condition)) +
+  theme_classic() +
+  theme(
+    legend.key = element_rect(fill="white", colour=NA),
+    legend.text = element_text(size=8),
+    legend.title = element_text(size=9),
+    plot.title = element_text(size=t.size)
+  ) +
+  geom_point(size=0.5, alpha=0.4) +
+  stat_smooth(method="lm") +
+  scale_colour_manual(values=cbPalette) +
+  labs(x="Day", y=NULL, title="Linear model") +
+  scale_x_continuous(breaks=log10(c(5,10,20)), labels=c(5,10,20)) +
+  scale_y_continuous(breaks=c(0,1,2,3), labels=c(1,10,100,1000), expand=c(0,0), limits=log10(y.lims)) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
+
+
+g <- plot_grid(g1, g2, g3, nrow=1, rel_widths = c(1.05, 0.9, 1.3))
+g
+
+ggsave(paste0(fig, "tumour_growth.png"), plot=g, device="png", width=7, height=3, dpi=300)
+
+```

@@ -58,6 +58,39 @@ count.ci <- function(n, conf.level=0.95) {
 ```
 
 
+```{r plot_exact_method}
+plotPoisShift <- function(mu, n, cut="lo") {
+  d <- data.frame(
+    x = 0:30,
+    y = dpois(0:30, mu)
+  )
+  g <- ggplot(d, aes(x, y)) +
+    theme_classic() +
+    theme_no_y +
+    geom_col(fill=fill.colour, colour="grey50", width=0.7) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(d$y) * 1.03)) +
+    scale_x_continuous(expand=c(0,0), limits=c(-0.5, 20.5), breaks=0:20) +
+    labs(x=NULL)
+  if(cut == "lo") {
+    dsel <- d[d$x <= n, ]
+  } else {
+    dsel <- d[d$x >= n, ]
+  }
+  g <- g + geom_col(data=dsel, fill=fill.colour.dark, colour="grey50", width=0.7)
+}
+
+n <- 5
+ci <- count.ci(n)
+g1 <- plotPoisShift(ci[["lo"]], n, cut="up")
+g2 <- plotPoisShift(ci[["up"]], n, cut="lo")
+
+g <- plot_grid(g1, g2, ncol=1, align="v")
+g
+
+ggsave(paste0(fig, "count_ci_exact.png"), plot=g, device="png", width=6, height=3.5, dpi=300)
+```
+
+
 ```{r ci_count_example}
 plotCountCI <- function(n, breaks=NULL, no.lab.y=FALSE) {
   if(is.null(breaks)) breaks <- waiver()
@@ -109,7 +142,7 @@ cor(dat.cor$x, dat.cor$y)
 ```{r sampling_distribution_r}
 nsim <- 100000
 n <- 30
-sam.cor <- lapply(1:nsim, function(i) {
+sam.cor <- mclapply(1:nsim, function(i) {
   i <- sample(1:nrow(dat.cor), n)
   r <- cor(dat.cor$x[i], dat.cor$y[i])
   Z <- 0.5 * log((1 + r) / (1 - r))

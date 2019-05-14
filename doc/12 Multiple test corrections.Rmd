@@ -15,6 +15,7 @@ source("../R/setup.R")
 library(boot)
 library(pwr)
 library(parallel)
+library(qvalue)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -81,12 +82,6 @@ ggsave(paste0(fig, "fwer_bonferroni.png"), plot=g2, device="png", width=3.5, hei
 ```
 
 ```{r generate_two_data}
-generateMeans <- function(M, S, n, m) {
-  unlist(lapply(1:m), function(i) {
-    mean(rnorm(n, M, S))
-  })
-}
-
 set.seed(110)
 h0 <- rnorm(5*970, 20, 5)
 h1 <- rnorm(5*30, 40, 5)
@@ -283,7 +278,7 @@ ggsave(paste0(fig, "large_p_3.png"), plot=g3, device="png", width=4, height=3.5,
 ```{r p_table_bh}
 padj <- pdat
 padj$p.value <-  p.adjust(padj$p.value, "BH")
-ptbh <- pTable(padj, alpha=alpha)
+ptbh <- pTable(padj, alpha=0.05)
 str(ptbh)
 ```
 
@@ -291,9 +286,9 @@ str(ptbh)
 ```{r fdr_distribution_functions}
 testMatrix <- function(x) {
   if(nrow(x) == 0) return(numeric(0))
-  p <- unlist(lapply(1:nrow(x), function(i) {
-    as.numeric(t.test(x[i, ], mu=20)$p.value)
-  }))
+  sapply(1:nrow(x), function(i) {
+    t.test(x[i, ], mu=20)$p.value
+  })
 }
 
 generateTestData <- function(m0, m1, n=5, M1=40) {
@@ -316,7 +311,7 @@ nboot <- 10000
 P <- mclapply(1:nboot, function(i) {
   pd <- generateTestData(970, 30)
   pd$p.value <- p.adjust(pd$p.value, method="BH")
-  tab <- pTable(pd, alpha=alpha)
+  tab <- pTable(pd, alpha=0.05)
   tab$FDR
 }, mc.cores = 4)
 fdr <- unlist(P)
@@ -386,4 +381,41 @@ ggsave(paste0(fig, "p_dist_null.png"), plot=g1, device="png", width=3.5, height=
 ggsave(paste0(fig, "p_dist_alt.png"), plot=g2, device="png", width=3.5, height=2.5, dpi=300)
 ggsave(paste0(fig, "p_dist_bad.png"), plot=g3, device="png", width=3.5, height=2.5, dpi=300)
 ggsave(paste0(fig, "p_dist_alt_one.png"), plot=g4, device="png", width=3.5, height=2.5, dpi=300)
+```
+
+
+```{r pq_plot}
+pqPLot <- function(d, xlim=c(0,1), ylim=NULL, x.brks=seq(0,1,0.2), y.brks=seq(0,1,0.2)) {
+  d$q.value <- qvalue(d$p.value)$qv
+  
+  if(is.null(ylim)) {
+    ylim <- c(0, 1.02*max(d[d$p.value <= xlim[2], "q.value"]))
+  }
+  ggplot(d, aes(x=p.value, y=q.value)) +
+    theme_classic() +
+    theme(plot.margin = margin(l=5, r=16, t=10)) +
+    geom_line(size=0.5, colour="red") +
+    scale_x_continuous(expand=c(0,0), limits=xlim, breaks=x.brks) +
+    scale_y_continuous(expand=c(0,0), limits=ylim, breaks=y.brks)
+}
+
+pvalues <- read.table("http://tiny.cc/multi_FDR", header=TRUE)
+pvalues$pbh <- p.adjust(pvalues$p.value, method="BH")
+
+g0 <- pqPLot(pvalues, ylim=c(0,1)) +
+  labs(x="P-value limit", y="False discovery rate") +
+  geom_line(aes(x=p.value, y=pbh), colour="blue") +
+  geom_hline(yintercept = qvalue(pvalues$p.value)$pi0, colour="red", linetype="dashed")
+g0
+
+g1 <- pqPLot(pvalues, ylim=c(0,1)) +
+  labs(x="P-value limit", y="Point FDR")
+g2 <- pqPLot(pvalues, c(0, 0.004), x.brks=seq(0,0.01, 0.002), y.brks=seq(0,0.1,0.05)) +
+  labs(x=NULL, y=NULL)
+g1
+g2
+
+ggsave(paste0(fig, "pq_bh.png"), plot=g0, device="png", width=3.5, height=3, dpi=300)
+ggsave(paste0(fig, "pq.png"), plot=g1, device="png", width=4, height=3.5, dpi=300)
+ggsave(paste0(fig, "pq_small.png"), plot=g2, device="png", width=2, height=2, dpi=300)
 ```

@@ -12,6 +12,7 @@ params:
 ```{r setup, echo=FALSE}
 root <- "09_anova"
 source("../R/setup.R")
+library(tidyverse)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -74,16 +75,25 @@ ggsave(paste0(fig, "mice_1way.png"), plot=g, device="png", width=3.2, height=3.2
 
 ```{r variance_within_between, fig.width=6}
 set.seed(23143)
-makeVar <- function(M, S=5, n=20) {
+makeVar_ <- function(M, S=5, n=20) {
   stopifnot(length(M) == length(countries))
   X <- sapply(1:length(M), function(i) rnorm(n, M[i], S))
   colnames(X) <- countries
   d <- reshape2::melt(X, varnames=c("i", "Country"), value.name="Mass")
 }
 
+makeVar <- function(M, S=5, n=20) {
+  M %>%
+    setNames(countries) %>%
+    map_df(rnorm, n=n, sd=S) %>%
+    gather(key="Country", value="Mass") %>%
+    mutate(x = as.integer(as.factor(Country)))
+}
+
+
 plotWB <- function(d, maxy=40) {
   aov <- aovResults(d)
-  d$x <- as.numeric(d$Country)
+  #d$x <- as.numeric(as.factor(d$Country))
   dm <- d %>% group_by(Country) %>% summarise(M=mean(Mass), SD=sd(Mass)) %>% mutate(x=as.numeric(Country))
   vb <- data.frame(x=5, M=20, SD=sqrt(aov$MS.b))
   ggplot() +

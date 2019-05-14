@@ -595,13 +595,13 @@ g1 <- ggplot() +
     theme(legend.position = "none") +
     #geom_boxplot(alpha=0.5, outlier.shape = NA) +
     scale_x_discrete() +
+    scale_y_continuous(expand=c(0,0), limits=c(0, 600)) +
     geom_vline(xintercept = 1:5, colour="grey90", size=0.3) +
     geom_boxplot(data=sdt, aes(x=Group, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="grey40") +
     scale_fill_manual(values=cbPalette) +
     geom_beeswarm(data=tumour, aes(x=Group, y=Volume, fill=Group), shape=21, cex=2.5, size=1.5) +
     #geom_jitter(width=0.15, height=0) +
-    labs(x="", y="Volume") +
-    ylim(0, 600)
+    labs(x="", y=expression(Volume~(mm^3)))
 g1
 ggsave(paste0(fig, "tumour_data.png"), plot=g1, device="png", width=3, height=3, dpi=300)
 
@@ -612,7 +612,7 @@ g2 <- ggplot(sdt, aes(Group, sd)) +
   geom_point() +
   geom_errorbar(aes(x=Group, ymin=sd-sde, ymax=sd+sde), width=0.2) +
   geom_hline(yintercept = c(75, 160), linetype="dotted") +
-  labs(x="", y="Standard deviation")
+  labs(x="", y=expression(Standard~deviation~(mm^3)))
 g2
 ggsave(paste0(fig, "tumour_sd.png"), plot=g2, device="png", width=3, height=3, dpi=300)
 ```

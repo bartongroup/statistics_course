@@ -41,13 +41,6 @@ efPalette <- c("lightgoldenrod3", "#009E73")
 ```
 
 ```{r themes}
-theme_no_y <- theme(
-    legend.position = "none",
-    axis.line.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.title.y = element_blank()
-  )
 ```
 
 
@@ -107,11 +100,12 @@ ggsave(paste0(fig, "mice_97_3.png"), plot=g, device="png", width=3, height=3, dp
 
 ```{r p-values_sampling_generate}
 pSampling <- function(d, n=5, nsim=10000, mu=20) {
-  p <- unlist(lapply(1:nsim, function(i) {
+  p <- sapply(1:nsim, function(i) {
     t.test(sample(d, n), mu = mu)$p.value
-  }))
+  })
 }
 
+set.seed(9999)
 p1 <- pSampling(d1, nsim=97000)
 p2 <- pSampling(d2, nsim=3000)
 ```
@@ -119,7 +113,7 @@ p2 <- pSampling(d2, nsim=3000)
 ```{r p-values_sampling}
 g1 <- plotTwoP(p1, p2, ymax=5)
 g1
- 
+
 g2 <- plotTwoP(p1, p2, ymax=5, x.lim=c(0, 0.05), bins=0.001, x.breaks=seq(0, 0.05, 0.01))
 g2
 
@@ -193,7 +187,7 @@ mu <- 20
 n <- 3
 
 pop <- rnorm(10000, 25, 5)
-L <- lapply(1:nsim, function(i) {
+L <- mclapply(1:nsim, function(i) {
   x <- sample(pop, n)
   M <- mean(x)
   p <- t.test(x, mu = mu)$p.value

@@ -35,6 +35,67 @@ pre code, pre, code {
 ```
 
 
+```{r read_grna}
+X1 <- read.table("../data/WT_lev.tsv", sep="\t")
+genes <- X1[, 1]
+X1 <- X1[, -1]
+colnames(X1) <- paste0("WT_", 1:ncol(X1))
+X1 <- X1[, -c(21,22,25,28,34,36)]
+X2 <- read.table("../data/Snf2_lev.tsv", sep="\t")
+X2 <- X2[, -1]
+colnames(X2) <- paste0("Snf2_", 1:ncol(X2))
+X2 <- X2[, -c(6,13,25,35)]
+grna <- data.frame(X1, X2)
+rownames(grna) <- genes
+```
+
+
+```{r grna_gene, fig.width=3, fig.height=3}
+plotGene <- function(gene, sel=NULL) {
+  m <- melt(grna[gene,])
+  lims <- c(min(m$value), max(m$value))
+  if(!is.null(sel)) m <- m[m$variable %in% sel,]
+  m$condition <- as.factor(gsub("_\\d+", "", m$variable, perl=TRUE))
+  m$condition <- relevel(m$condition, "WT")
+  if(is.null(sel)) print(t.test(value~condition, data=m))
+  
+  mm <- m %>% group_by(condition) %>% summarise(M=mean(value), SD=sd(value), n=n()) %>% mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
+  print(mm)
+  mm$i <- c(1.3, 1.7)
+  
+  g <- ggplot() +
+    theme_classic() +
+    theme(
+      legend.position = "none"
+    ) +
+    #geom_boxplot(alpha=0.3, colour="grey70", outlier.shape = NA) +
+    scale_fill_manual(values=cbPalette) +
+    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density") +
+    labs(x=NULL, y="Read count") +
+    scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
+    ylim(lims)
+  if(is.null(sel)) {
+    g <- g +
+      geom_errorbar(data=mm, aes(x=i, ymin=M-CI, ymax=M+CI), width=0.15) +
+      geom_point(data=mm, aes(x=i, y=M, fill=condition), size=3, shape=22)
+  }
+  g
+}
+
+gene <- "yfr017c"
+sort(grna[gene, ])
+
+g1 <- plotGene(gene, sel=c("WT_33", "Snf2_31"))
+g1
+
+g2 <- plotGene(gene)
+g2
+
+ggsave(paste0(fig, "grna_expression_1.png"), plot=g1, device="png", width=2.1, height=3.5, dpi=300) 
+ggsave(paste0(fig, "grna_expression.png"), plot=g2, device="png", width=2.1, height=3.5, dpi=300) 
+```
+
+
 ```{r flg_expression, fig.width=2.1, fig.height=3.5}
 set.seed(111)
 ctrl <- c(41723, 1000*rnorm(29, 32, 8))

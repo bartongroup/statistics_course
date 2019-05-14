@@ -150,11 +150,11 @@ se <- function(x) {
 
 
 plotMiceBox <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=4, size=2, m.width=0.3,
-                        with.means=TRUE, with.boxes=FALSE, with.shape=FALSE) {
+                        with.means=TRUE, with.boxes=FALSE, with.shape=FALSE, palette=british.palette) {
   g <- ggplot() +
     theme_classic() +
     theme(legend.position = "none") +
-    scale_fill_manual(values=british.palette) +
+    scale_fill_manual(values=palette) +
     labs(x="", y=ylab)
   
   if(!is.null(limits)) g <- g + scale_y_continuous(limits=limits, expand=c(0,0))
@@ -176,4 +176,13 @@ plotMiceBox <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=4, siz
   }
   g
 }
+
+
+theme_no_y <- theme(
+  legend.position = "none",
+  axis.line.y = element_blank(),
+  axis.ticks.y = element_blank(),
+  axis.text.y = element_blank(),
+  axis.title.y = element_blank()
+)
 

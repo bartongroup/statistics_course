@@ -144,11 +144,12 @@ nunif <- function(nbin, ntot) {
 
 generatePipetting <- function(nbin, ntot, nrow) {
   ex <- rep(ntot/nbin, nbin)
-  P <- lapply(1:nrow, function(i) {
+  d <- matrix(nrow=nrow, ncol=nbin)
+  for(i in 1:nrow) {
     r <- nunif(nbin, ntot)
-    (r - ex) / sqrt(ex)
-  })
-  df <- do.call(rbind, P)
+    d[i, ] <- (r - ex) / sqrt(ex)
+  }
+  d
 } 
 ```
 
@@ -159,7 +160,7 @@ nsim <- 100000
 nbatch <- 10
 P <- mclapply(1:nbatch, function(i) {
   generatePipetting(nbin, ntot, nsim)
-}, mc.cores=4)
+}, mc.cores=5)
 simpip <- do.call(rbind, P) 
 ```
 
@@ -183,7 +184,7 @@ g <- ggplot(m, aes(x=value, y=..density..)) +
   scale_x_continuous(limits=c(-3, 3)) +
   scale_y_continuous(expand=c(0,0), limits=c(0, 0.46))
 g
-
+ 
 ggsave(paste0(fig, "pipetting_sim.png"), plot=g, device="png", width=5, height=2, dpi=300)
 ```
 

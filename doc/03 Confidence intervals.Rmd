@@ -94,6 +94,8 @@ P <- mclapply(1:nsim, function(i) {
 sam.dist <- do.call(rbind, P)
 ```
 
+
+
 ```{r sampling_distributions_plot}
 lms <- list(
   Mean = c(10, 30),
@@ -214,8 +216,6 @@ M + tc * SE
 ```
 
 ```{r ci_vs_se}
-set.seed(1112)
-
 errPlot <- function(n, p.size=1, cex=1) {
   x <- rnorm(n)
   M <- mean(x)
@@ -247,6 +247,13 @@ errPlot <- function(n, p.size=1, cex=1) {
   g
 }
 
+set.seed(10)
+g0 <- errPlot(2)
+g0
+ggsave(paste0(fig, "sd_se_ci_2.png"), plot=g0, device="png", width=4, height=3, dpi=300)
+
+
+set.seed(1112)
 g1 <- errPlot(8)
 g1
 ggsave(paste0(fig, "sd_se_ci_8.png"), plot=g1, device="png", width=4, height=3, dpi=300)

@@ -668,8 +668,8 @@ ggsave(paste0(fig, "rank_variance_between.png"), plot=g, device="png", width=3.5
 ```
 
 ```{r kruskal_boot_function}
-generateHdist <- function(n=c(12, 9, 8, 5), nsim=100000) {
-  P <- lapply(1:nsim, function(i) {
+generateHdist <- function(n=c(12, 9, 8, 5), nsim=1000) {
+  P <- sapply(1:nsim, function(i) {
     L <- lapply(1:length(n), function(k) {
       data.frame(
         Country = k,
@@ -678,9 +678,9 @@ generateHdist <- function(n=c(12, 9, 8, 5), nsim=100000) {
     })
     d <- do.call(rbind, L)
     kt <- kruskal.test(Lifespan ~ Country, data=d)
-    kt$statistic
+    as.numeric(kt$statistic)
   })
-  H <- as.numeric(unlist(P))
+  P
 }
 ```
 
@@ -732,12 +732,13 @@ QKS <- function(lambda, eps1=0.0001, eps2=1e-12) {
   return(1)
 }
 
-kolmogorovDist <- function(n1, n2, delta=0.01) {
+kolmogorovDist <- function(x, n1, n2) {
   sn <- sqrt(n1 * n2 / (n1 + n2))
-  x <- seq(0, 1, delta)
-  y <- unlist(lapply(x, function(d) {
+  #x <- seq(0, 1, delta)
+  delta <- x[2] - x[1]
+  y <- sapply(x, function(d) {
     1 - QKS((sn + 0.12 + 0.11/sn) * d)
-  }))
+  })
   n <- length(y)
   f <- (y[2:n] - y[1:(n-1)]) / delta
   x <- (x[2:n] + x[1:(n-1)]) / 2
@@ -807,7 +808,7 @@ ggsave(paste0(fig, "cumulsum1.png"), plot=g1, device="png", width=3.5, height=3,
 countries <- c("English", "Scottish") 
 ks.test(ls4[ls4$Country==countries[1], "Lifespan"], ls4[ls4$Country==countries[2], "Lifespan"])
 
-g1 <- plotMiceBox(subset(ls4, Country %in% countries), cex=5, size=1.8)
+g1 <- plotMiceBox(subset(ls4, Country %in% countries), what="Lifespan", ylab="Lifespan (days)", cex=5, size=1.8)
 g2 <- plotCumsum(ls4, vars=countries)
 g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
 g
@@ -821,7 +822,7 @@ ggsave(paste0(fig, "ks_eng_sco.png"), plot=g, device="png", width=5, height=2.5,
 countries <- c("English", "N.Irish") 
 ks.test(ls4[ls4$Country==countries[1], "Lifespan"], ls4[ls4$Country==countries[2], "Lifespan"])
 
-g1 <- plotMiceBox(subset(ls4, Country %in% countries), cex=5, size=1.8)
+g1 <- plotMiceBox(droplevels(subset(ls4, Country %in% countries)), cex=5, size=1.8, what="Lifespan", ylab="Lifespan (days)",)
 g2 <- plotCumsum(ls4, vars=countries)
 g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
 g
@@ -848,8 +849,10 @@ countries <- c("English", "Scottish")
 ls.gen <- generateMice(12, 9)
 ks.test(ls.gen[ls.gen$Country==countries[1], "Lifespan"], ls.gen[ls.gen$Country==countries[2], "Lifespan"])
 
-g1 <- plotMiceBox(ls.gen)
+g1 <- plotMiceBox(ls.gen, what="Lifespan", ylab="Lifespan (days)")
 g2 <- plotCumsum(ls.gen, vars=countries)
+g1
+g2
 
 ggsave(paste0(fig, "ks_gen_example_box.png"), plot=g1, device="png", width=2, height=2.5, dpi=300)
 ggsave(paste0(fig, "ks_gen_example_cum.png"), plot=g2, device="png", width=3, height=2.5, dpi=300)
@@ -857,15 +860,14 @@ ggsave(paste0(fig, "ks_gen_example_cum.png"), plot=g2, device="png", width=3, he
 
 ```{r ks_boot_function}
 generateDdist <- function(nx, ny, nsim=100000) {
-  P <- lapply(1:nsim, function(i) {
+  D <- sapply(1:nsim, function(i) {
     L <- lapply(1:length(n), function(k) {
       generateMice(nx, ny)
     })
     d <- do.call(rbind, L)
     kt <- ks.test(d[d$Country=="English", "Lifespan"], d[d$Country=="Scottish", "Lifespan"])
-    kt$statistic
+    as.numeric(kt$statistic)
   })
-  D <- as.numeric(unlist(P))
 }
 ```
 
@@ -878,9 +880,9 @@ D <- generateDdist(12, 9, nsim=10000)
 
 ```{r plot_ddist_function}
 dks <- function(x, n) {
-  p <- unlist(lapply(x, function(d) {
+  p <- sapply(x, function(d) {
     pkolmim(d, n)
-  }))
+  })
   delta <- x[2] - x[1]
   l <- length(x)
   f <- (p[2:l] - p[1:(l-1)]) / delta
@@ -911,14 +913,13 @@ plotDdist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
   ne <- nx * ny / (nx + ny)
   
   #gs <- dks(x, ne)
-  gs <- kolmogorovDist(nx, ny)
+  gs <- kolmogorovDist(seq(0, 1, 0.001), nx, ny)
  
   g2 <- g1 +
     geom_line(data=gs, aes(x, f), colour="red")
   g2
 
-  xc <- seq(d.cut, 1, 0.001)
-  ff <- kolmogorovDist(xc, ne)
+  ff <- kolmogorovDist(seq(d.cut, 1, 0.001), nx, ny)
   gc <- data.frame(
     x = c(d.cut, ff$x, 1),
     y = c(0, ff$f, 0)
@@ -937,7 +938,7 @@ ksp <- plotDdist(D, 12, 9, d.cut=0.42)
 ksp$g1
 ksp$g2
 ksp$g3
-
+ 
 ggsave(paste0(fig, "ks_dist.png"), plot=ksp$g1, device="png", width=3, height=2.5, dpi=300)
 ggsave(paste0(fig, "ks_dist_theor.png"), plot=ksp$g2, device="png", width=3, height=2.5, dpi=300)
 ggsave(paste0(fig, "ks_dist_theor_cut.png"), plot=ksp$g3, device="png", width=3, height=2.5, dpi=300)
@@ -951,7 +952,7 @@ ggsave(paste0(fig, "ks_dist_theor_cut.png"), plot=ksp$g3, device="png", width=3,
 set.seed(747) 
 countries <- c("CTRL", "TREAT")
 ls.gen <- generateMice(12, 12, Mx=100, My=110, Sx=10, Sy=10, what="Value", countries=countries)
-ks.test(ls.gen[ls.gen$Country==countries[1], "Value"], ls.gen[ls.gen$Country==countries[2], "Value"])
+ks.test(ls.gen[ls.gen$Country==countries[1], "Value"], ls.gen[ls.gen$Country==countries[2], "Value"]) 
 g1 <- plotMiceBox(ls.gen, what="Value", ylab="Value", palette=cbPalette, cex=5, size=1.8)
 g2 <- plotCumsum(ls.gen, vars=countries, what="Value", xlab="Value", palette = cbPalette)
 g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
@@ -959,7 +960,7 @@ g
 
 ggsave(paste0(fig, "ks_location.png"), plot=g, device="png", width=5, height=2.5, dpi=300)
 
-set.seed(747)
+set.seed(700)
 ls.gen2 <- generateMice(16, 16, what="Value", Mx=100, My=100, Sx=2, Sy=10, countries=countries)
 ks.test(ls.gen2[ls.gen2$Country==countries[1], "Value"], ls.gen2[ls.gen2$Country==countries[2], "Value"])
 g1 <- plotMiceBox(ls.gen2, what="Value", ylab="Value", palette=cbPalette, cex=5, size=1.8)
