@@ -420,15 +420,16 @@ npar <- 8
 ns <- nsim / npar
 mu <- 20 
 sigma <- 5
-P <- mclapply(1:npar, function(i) {
-  d <- matrix(nrow=ns, ncol=2)
+sam.dist <- mclapply(1:npar, function(i) {
+  # filling pre-defined matrix is faster that creating dynamic list
+  d <- matrix(nrow=ns, ncol=2, dimnames=list(NULL, c("Mean", "Median")))
   for(k in 1:ns) {
     x <- rnorm(n, mu, sigma)
     d[k, ] <- c(mean(x), median(x))
   }
-  d <- setNames(data.frame(d), c("Mean", "Median"))
-}, mc.cores=npar)
-sam.dist <- do.call(rbind, P)
+  as_tibble(d)
+}, mc.cores=npar) %>%
+  bind_rows()
 ```
 
 

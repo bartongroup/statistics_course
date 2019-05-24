@@ -419,21 +419,21 @@ ggsave(paste0(fig, "boxplot_examples.png"), plot=g, device="png", width=7, heigh
 
 
 ```{r barplot_example_1}
-d <- data.frame(
+dat <- tibble(
   n = c(101, 98, 112, 100, 104, 89, 99, 100),
   s = c(86, 23, 67, 55, 95, 12, 34, 34),
   cond = rep(c("WT", "KO1", "KO2", "KO3"), 2),
   treat = c(rep("DMSO", 4), rep("DD342", 4))
-)
-d$p <- d$s / d$n
-d$cond <- relevel(d$cond, "WT")
-d$treat <- relevel(d$treat, "DMSO")
+) %>%
+  mutate(p = s / n, cond = relevel(factor(cond), "WT"), treat = relevel(factor(treat), "DMSO"))
 
-P <- lapply(1:nrow(d), function(i) {
-  prop.test(d$s[i], d$n[i])$conf.int
-})
-lim <- setNames(as.data.frame(do.call(rbind, P)), c("lo", "up"))
-d <- cbind(d, lim)
+d <- sapply(1:nrow(dat), function(i) {
+  prop.test(dat$s[i], dat$n[i])$conf.int
+}) %>%
+  t %>%
+  as_tibble %>%
+  setNames(c("lo", "up")) %>%
+  bind_cols(dat)
 
 g <- ggplot(d, aes(x=cond, y=p, fill=treat)) +
   theme_classic() +

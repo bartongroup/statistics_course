@@ -1,4 +1,4 @@
-library(ggplot2)
+suppressMessages(library(tidyverse))
 library(gganimate)
 library(ggbeeswarm)
 library(lemon)
@@ -10,7 +10,6 @@ library(ggridges)
 library(reshape2)
 suppressMessages(library(ggridges))
 suppressMessages(library(viridis))
-suppressMessages(library(dplyr))
 library(parallel)
 
 theme_dist <- theme_classic()

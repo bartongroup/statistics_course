@@ -164,6 +164,7 @@ P <- mclapply(1:nbatch, function(i) {
 simpip <- do.call(rbind, P) 
 ```
 
+
 ```{r sim_pippeting, fig.width=4, fig.height=3}
 m <- reshape2::melt(simpip, varnames=c("sim", "bin"))
 x <- seq(-4, 4, 0.05)

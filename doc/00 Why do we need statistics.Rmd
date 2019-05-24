@@ -14,6 +14,7 @@ root <- "00_why_statistics"
 source("../R/setup.R")
 library(beeswarm)
 library(tidyverse)
+library(edgeR)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -22,6 +23,7 @@ knitr::opts_chunk$set(
   cache.path = paste0("../cache/", root),
   fig.path = paste0("../cache/", root)
 )
+options(width=200)
 fig <- paste0("../fig/", root, "/")
 if(!dir.exists(fig)) dir.create(fig)
 ```
@@ -66,11 +68,8 @@ plotGene <- function(gene, sel=NULL, p.alpha=1) {
   
   g <- ggplot() +
     theme_classic() +
-    theme(
-      legend.position = "none"
-    ) +
     #geom_boxplot(alpha=0.3, colour="grey70", outlier.shape = NA) +
-    scale_fill_manual(values=cbPalette) +
+    scale_fill_manual(values=cbPalette, guide=FALSE) +
     geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
     labs(x=NULL, y="Read count") +
     scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
@@ -169,20 +168,16 @@ ggsave(paste0(fig, "body_temp.png"), plot=g, device="png", width=3.5, height=3.5
 ```{r tumour_growth_read_data}
 ptpn <- read_tsv("../data/tumour_ptpn.txt") %>%
   mutate(day = as.numeric(gsub("day", "", X1))) %>%
-  select(-1)
-names(ptpn) <- c(paste0("KO_", 1:12), paste0("WT_", 1:12), "day")
-
-ptpn <- ptpn %>%
+  select(-1) %>%
+  setNames(c(paste0("KO_", 1:12), paste0("WT_", 1:12), "day")) %>%
   gather("sample", "volume", -day) %>%
   separate("sample", c("condition", "replicate"), "_", remove=FALSE) %>%
-  filter(!is.na(volume) & volume > 0)
+  filter(!is.na(volume) & volume > 0) %>%
+  mutate(lvolume = log10(volume), lday=log10(day))
 
 m <- ptpn %>%
   group_by(condition, day) %>%
   summarise(M = mean(volume), SE = sd(volume) / sqrt(n()))
-
-lp <- ptpn %>%
-  mutate(lvolume = log10(volume), lday=log10(day))
 ```
 
 
@@ -199,8 +194,8 @@ g1 <- ggplot(ptpn, aes(x=day, y=volume, group=sample, colour=condition)) +
     labs(x="Day", y=expression(Tumor~volume~(mm^3)), title="Raw data") +
     scale_x_log10() +
     scale_y_log10(expand=c(0,0), limits=y.lims) +
-    scale_colour_manual(values=cbPalette) +
-    theme(legend.position = "none", plot.title=element_text(size=t.size))
+    scale_colour_manual(values=cbPalette, guide=FALSE) +
+    theme(plot.title=element_text(size=t.size))
 
 g2 <- ggplot(m) +
   theme_classic() +
@@ -208,13 +203,13 @@ g2 <- ggplot(m) +
   geom_ribbon(aes(x=day, ymin=M-SE, ymax=M+SE, fill=condition), alpha=0.3) +
   scale_x_log10() +
   scale_y_log10(expand=c(0,0), limits=y.lims) +
-  scale_colour_manual(values=cbPalette) +
-  scale_fill_manual(values=cbPalette) +
+  scale_colour_manual(values=cbPalette, guide=FALSE) +
+  scale_fill_manual(values=cbPalette, guide=FALSE) +
   labs(x="Day", y=NULL, title="Mean and standard error") +
-  theme(legend.position = "none", plot.title=element_text(size=t.size))
+  theme(plot.title=element_text(size=t.size))
 
 
-g3 <- ggplot(lp, aes(x=lday, y=lvolume, colour=condition)) +
+g3 <- ggplot(ptpn, aes(x=lday, y=lvolume, colour=condition)) +
   theme_classic() +
   theme(
     legend.key = element_rect(fill="white", colour=NA),
@@ -236,4 +231,188 @@ g
 
 ggsave(paste0(fig, "tumour_growth.png"), plot=g, device="png", width=7, height=3, dpi=300)
 
+```
+
+
+```{r read_devspine}
+conditions <- c("E12.5", "E16.5", "Adult")
+replicates <- 1:3
+metadata <- expand.grid(replicate=replicates, condition=conditions) %>%
+  unite(sample, c(condition, replicate), sep="-", remove=FALSE) %>%
+  mutate(column = tolower(sample)) %>% 
+  mutate(column = gsub("\\.", "", column)) %>%
+  mutate(column = gsub("-", "_", column))
+
+ds <- 
+  read_tsv("../data/expr_e125-e165-adult_raw.tsv") %>%
+  filter(rowSums(.[2:10]) > 0) %>%
+  filter(str_detect(GeneID, pattern="ensmusg")) %>%
+  column_to_rownames("GeneID") %>%
+  setNames(metadata$sample)
+
+norms <- as.matrix(ds) %>%
+  DGEList(group=metadata$condition) %>%
+  calcNormFactors() %>%
+  pluck("samples", "norm.factors")
+
+dsn <- t(t(ds) * norms) %>% as.data.frame
+
+
+ds2 <- ds[, c(1:3, 7:9)]
+dsn2 <- dsn[, c(1:3, 7:9)]
+
+dim(ds)
+```
+
+```{r clustering function}
+plotClustering_ <- function(cnt, x.text.size=10) {
+  corr.mat <- cor(cnt, use="complete.obs")
+  dis <- as.dist(1 - corr.mat)  # dissimilarity matrix
+  hc <- hclust(dis)
+  dendr <- ggdendro::dendro_data(hc)
+  dat <- ggdendro::segment(dendr)
+  lab <- dendr$labels %>% mutate(condition = gsub("-\\d", "", label, perl=TRUE))
+  theme.d <- ggplot2::theme(
+    panel.grid.major = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    panel.background = ggplot2::element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = ggplot2::element_blank(),
+    axis.line.x = ggplot2::element_line(size=0.5),
+    axis.ticks.y = ggplot2::element_blank(),
+    legend.position = "none"
+  )
+  ggplot() +
+    theme.d +
+    geom_segment(data=dat, aes_(x=~x, y=~y, xend=~xend, yend=~yend)) +
+    geom_text(data=lab, aes(x=x, y=y, label=label, colour=condition), hjust=1) +
+    coord_flip() +
+    #scale_x_continuous(breaks = seq_along(dendr$labels$label), labels = dendr$labels$label) +
+    scale_y_continuous(expand = c(0.2,0), limits = c(0, max(dat$y) * 1.03)) +
+    labs(x=NULL, y="Distance")
+}
+
+library(dendextend)
+plotClustering <- function(cnt) {
+  corr.mat <- cor(cnt, use = "complete.obs") 
+  dend <- as.dist(1 - corr.mat) %>% hclust %>% as.dendrogram
+  cond <- gsub("-\\d", "", colnames(cnt), perl=TRUE) %>%
+    factor(levels=c("E12.5", "E16.5", "Adult")) %>%
+    as.numeric
+  cond <- cond[order.dendrogram(dend)]
+  labels_colors(dend) <- cbPalette[cond]
+  dend <- dend %>% set("labels_cex", 0.6) %>% set("branches_lwd", 0.3)
+  gg <- as.ggdend(dend)
+  ggplot(gg, horiz=FALSE, offset_labels=-0.01) + ylim(-0.1, max(get_branches_heights(dend)))
+}
+
+```
+
+```{r clustering}
+g <- plotClustering(ds)
+g 
+ 
+ggsave(paste0(fig, "clustering.png"), plot=g, device="png", width=3, height=3.5, dpi=300)
+
+myKable(head(ds))
+
+head(ds)
+tail(ds,1)
+```
+
+
+```{r plot_one_gene_function}
+plotOneGene <- function(dat, gene) {
+  d <- dat[gene, ] %>%
+    gather(key="sample", value="count") %>%
+    mutate(condition = gsub("-\\d", "", sample, perl=TRUE)) %>%
+    mutate(condition = factor(condition, levels=c("E12.5", "E16.5", "Adult")))
+  ggplot(d, aes(x=condition, y=count, fill=condition)) +
+    theme_linedraw() +
+    theme(legend.position = "none") +
+    geom_beeswarm(shape=21, cex=3, size=1.8) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(d$count) * 1.05)) +
+    scale_fill_manual(values=cbPalette) +
+    labs(x=NULL, y="Count")
+}
+```
+
+```{r genes}
+genes <- c("ensmusg00000051951", "ensmusg00000009281","ensmusg00000013415")
+for(gene in genes) {
+  g <- plotOneGene(dsn, gene)
+  print(g)
+  ggsave(paste0(fig, paste0("gene_", gene,".png")), plot=g, device="png", width=2.5, height=2, dpi=300)  
+}
+```
+
+
+```{r de}
+cond2 <- droplevels(metadata$condition[c(1:3,7:9)])
+design <- model.matrix(~0 + cond2)
+colnames(design) <- levels(cond2)
+
+gt.contrasts <- makeContrasts(
+  "Adult-E12.5" = "Adult-E12.5",
+  levels = design
+)
+
+de.edger <- as.matrix(ds2) %>%
+  DGEList(group=cond2) %>%
+  calcNormFactors() %>%
+  estimateDisp(design=design) %>%
+  glmQLFit(design=design) %>%
+  glmQLFTest(contrast=gt.contrasts[, "Adult-E12.5"]) %>%
+  topTags(n=1e6, adjust.method="BH", sort.by="none") %>%
+  pluck("table")
+
+test <- function(v) {
+  x <- v[1:3]
+  y <- v[4:6]
+  if(sum(is.na(x)) > 1 | sum(is.na(y)) > 1) {
+    return(NA)
+  } else {
+    return(t.test(x, y)$p.value)
+  }
+}
+
+de.t <- dsn2 %>%
+  na_if(0) %>%
+  log10 %>%
+  apply(., 1, test) %>%
+  as.data.frame %>%
+  setNames("P")
+
+de <- merge(de.edger, de.t, by="row.names") %>% rename(gene_id = Row.names)
+```
+
+
+```{r de_selection}
+only.t <- de %>% filter(P < 0.05 & PValue < 0.05 & FDR > 0.1 & logCPM > 2)
+only.edger <- de %>% filter(P > 0.1 & FDR < 0.01 & logCPM > 2)
+
+gene <- only.edger[5, "gene_id"]
+g1 <- plotOneGene(dsn2, gene)
+print(de[de$gene_id == gene, ])
+g1
+ggsave(paste0(fig, paste0("gene_edger.png")), plot=g1, device="png", width=2.5, height=2, dpi=300) 
+
+gene <- only.t[5, "gene_id"]
+g2 <- plotOneGene(dsn2, gene)
+print(de[de$gene_id == gene, ])
+g2
+ggsave(paste0(fig, paste0("gene_t.png")), plot=g2, device="png", width=2.5, height=2, dpi=300) 
+
+```
+
+
+```{r genes_de, eval=FALSE}
+genes <- c("ensmusg00000023011", "ensmusg00000031671", "ensmusg00000043614")
+for(gene in genes) {
+  g <- plotOneGene(dsn2, gene)
+  print(de[de$gene_id == gene,])
+  t.test(dsn2[gene, 1:3], dsn2[gene, 4:6]) %>% print
+  print(g)
+  ggsave(paste0(fig, paste0("gene2_", gene,".png")), plot=g, device="png", width=2.5, height=2, dpi=300)
+}
 ```

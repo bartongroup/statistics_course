@@ -146,9 +146,8 @@ sam.cor <- mclapply(1:nsim, function(i) {
   i <- sample(1:nrow(dat.cor), n)
   r <- cor(dat.cor$x[i], dat.cor$y[i])
   Z <- 0.5 * log((1 + r) / (1 - r))
-  data.frame(r=r, Z=Z)
-})
-sam.cor <- do.call(rbind, sam.cor)
+  tibble(r=r, Z=Z)
+}) %>% bind_rows
 ```
 
 ```{r plot_9_r}
