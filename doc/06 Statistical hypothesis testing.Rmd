@@ -169,8 +169,58 @@ ggsave(paste0(fig, "tea_tasting.png"), plot=hyp, device="png", width=3.2, height
 ```
 
 
-
-```{r enrichment, fig.width=3.2, fig.height=2}
-
+```{r plot_fisher_fun}
+plotFisher <- function(d) {
+  ggplot(d, aes(x = col, y = cnt, group = row, fill = row)) +
+    theme_dist +
+    #theme(panel.grid = element_blank()) +
+    geom_col(position = position_dodge(), colour="black") +
+    scale_fill_manual(values = c(fill.colour, fill.colour.dark)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0, max(d$cnt * 1.03))) +
+    labs(x = NULL, y = "Count", fill = "Outcome")
+} 
 ```
 
+```{r tea_plots, fig.width=4, fig.height=3}
+d1 <- tibble(
+  col = c("Tea first", "Milk first", "Tea first", "Milk first") %>% as_factor,
+  row = c("Says 'tea'", "Says 'tea'", "Says 'milk'", "Says 'milk'") %>% as_factor,
+  cnt = c(4, 5, 2, 1) 
+)
+g1 <- plotFisher(d1) 
+g1 
+
+ggsave(paste0(fig, "fisher_bristol_1.png"), plot=g1, device="png", width=2.8, height=1.8, dpi=300)
+
+d2 <- tibble(
+  col = c("Tea first", "Milk first", "Tea first", "Milk first") %>% as_factor,
+  row = c("Says 'tea'", "Says 'tea'", "Says 'milk'", "Says 'milk'") %>% as_factor,
+  cnt = c(5, 2, 0, 5) 
+)
+g2 <- plotFisher(d2) 
+g2
+
+ggsave(paste0(fig, "fisher_bristol_2.png"), plot=g2, device="png", width=2.8, height=1.8, dpi=300)
+```
+
+```{r drug_plots, fig.width=4, fig.height=3}
+d1 <- tibble(
+  col = c("Placebo", "Drug A", "Placebo", "Drug A") %>% as_factor,
+  row = c("Alive", "Alive", "Dead", "Dead"),
+  cnt = c(12, 35, 68, 65) 
+)
+g1 <- plotFisher(d1) 
+g1 
+
+ggsave(paste0(fig, "fisher_drug_a.png"), plot=g1, device="png", width=2.8, height=1.8, dpi=300)
+
+d2 <- tibble(
+  col = c("Placebo", "Drug B", "Placebo", "Drug B") %>% as_factor,
+  row = c("Alive", "Alive", "Dead", "Dead"),
+  cnt = c(25, 34, 32, 31) 
+)
+g2 <- plotFisher(d2) 
+g2
+
+ggsave(paste0(fig, "fisher_drug_b.png"), plot=g2, device="png", width=2.8, height=1.8, dpi=300)
+```

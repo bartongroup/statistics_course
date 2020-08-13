@@ -1,4 +1,6 @@
-suppressMessages(library(tidyverse))
+suppressPackageStartupMessages({
+
+library(tidyverse)
 library(gganimate)
 library(ggbeeswarm)
 library(lemon)
@@ -8,9 +10,11 @@ library(gridExtra)
 library(cowplot)
 library(ggridges)
 library(reshape2)
-suppressMessages(library(ggridges))
-suppressMessages(library(viridis))
+library(ggridges)
+library(viridis)
 library(parallel)
+  
+})
 
 theme_dist <- theme_classic()
 
