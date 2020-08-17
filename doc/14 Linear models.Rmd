@@ -12,6 +12,7 @@ params:
 ```{r setup, echo=FALSE}
 root <- "14_linear_models"
 source("../R/setup.R")
+library(car)
 knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
@@ -144,7 +145,7 @@ plotFitCoefficients <- function(dat, cf, nudge=NULL, text.size=14, with.baseline
     scale_x_continuous(breaks=1:n, labels=gdat$group, limits=c(0.7, n+0.3)) +
     scale_y_continuous(expand=c(0,0), limits=c(0, 1.05*max(dat$value))) +
     theme(legend.position = "none") +
-    scale_colour_manual(values=cbPalette) +
+    scale_colour_manual(values=c(cbPalette, "black")) +
     geom_segment(data=gdat, aes(x=x-dw, xend=x+dw, y=M, yend=M), size=1) +
     geom_segment(data=gdat, aes(x=x, xend=x, y=lo, yend=up, colour=as.factor(x))) +
     geom_segment(data=gdat, aes(x=x-dw, xend=x+dw, y=up, yend=up, colour=as.factor(x))) +
@@ -317,4 +318,96 @@ names(cf)[4] <- "dietfat + sexm + diethifat:sexm"
 g <- plotFitCoefficients(dat, cf, nudge=c(0, 0, -1, -7)) 
 
 ggsave(file.path(fig, "mice_diet_sex_inter_coef.png"), g, "png", width=4, height=3)
+```
+
+
+
+```{r car_data}
+sal <- as_tibble(Salaries) %>% 
+  mutate(rank = fct_relevel(rank, "AsstProf"))
+myKable(sal[1:10,])
+```
+
+```{r car_plot, fig.width=8, fig.height=5}
+plotSal <- function(sal, what) {
+  sal <- mutate(sal, x = !!sym(what))
+  g <- ggplot(sal, aes(x=x, y=salary)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    labs(x=what, y="salary")
+  if(is.factor(sal$x)) {
+    g <- g + geom_boxplot(outlier.shape = NA) + geom_beeswarm(size=0.6, colour="grey50")
+  } else {
+    g <- g + geom_point(size=0.6, colour="grey50")
+  }
+  g
+}
+
+snames <- colnames(sal %>% select(-salary))
+g <- map(snames, ~plotSal(sal, .x)) %>% 
+  plot_grid(plotlist = .)
+g
+
+ggsave(file.path(fig, "salaries.png"), g, "png", width=8, height=5)
+
+g1 <- ggplot(sal, aes(x=yrs.since.phd, y=yrs.service)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  geom_point(size=0.6)
+g1
+
+ggsave(file.path(fig, "salaries_years.png"), g1, "png", width=3, height=2.5)
+```
+
+
+```{r sal_matrix}
+model.matrix(salary ~ rank + discipline + yrs.since.phd + sex, data=sal)
+```
+
+
+```{r sal_sex}
+f1 <- lm(salary ~ sex, data=sal)
+summary(f1)
+
+f2 <- lm(salary ~ rank + discipline + yrs.since.phd + sex, data=sal)
+summary(f2)
+
+f3 <- lm(salary ~ rank + discipline + yrs.since.phd + yrs.service + sex, data=sal)
+summary(f3)
+
+f4 <- lm(salary ~ rank + discipline, data=sal)
+summary(f4)
+```
+
+```{r sal_cor}
+vif(f3)
+vif(f2)
+```
+
+```{r sal_train, fig.width=4, fig.height=4}
+set.seed(2021)
+itest <- sample(1:nrow(sal), 40)
+itrain <- setdiff(1:nrow(sal), itest)
+
+sal_train <- sal[itrain, ]
+sal_test <- sal[itest, ]
+
+lm.train <- lm(salary ~ rank + discipline, data=sal_train)
+sal_test <- bind_cols(sal_test, predict(lm.train, sal_test, interval="confidence") %>% as_tibble())
+
+mn <- min(c(sal_test$salary, sal_test$pred))
+mx <- max(c(sal_test$salary, sal_test$pred))
+g <- sal_test %>% 
+  ggplot(aes(x=salary, y=fit, ymin=lwr, ymax=upr)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  geom_errorbar(width=0, colour="grey70") +
+  geom_point() +
+  geom_abline(slope=1, intercept = 0, colour="red") +
+  labs(x="Salary", y="Predicion") +
+  scale_x_continuous(labels=scales::comma, limits=c(mn, mx)) +
+  scale_y_continuous(labels=scales::comma, limits=c(mn, mx))
+g
+
+ggsave(file.path(fig, "salaries_prediction.png"), g, "png", width=4, height=4)
 ```
