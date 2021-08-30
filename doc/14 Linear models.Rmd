@@ -303,7 +303,89 @@ f <- lm(mass ~ diet + sex + diet:sex, data = mds)
 summary(f)$coefficients
 ```
 
+```{r anova2_plot_function}
+plotAnova2 <- function(mice, ylim=c(0,40), text.size=10) {
+  grand.mean <- mean(mice$mass)
+  mice.gr <- mice %>% group_by(diet, sex) %>% summarise(M = mean(mass))
 
+  g1 <- ggplot(mice, aes(x=1, y=mass)) +
+    theme_classic() +
+    facet_grid(sex ~ diet, switch="both") +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    #geom_boxplot(aes(fill=diet), alpha=0.5, outlier.shape = NA, width=0.7) +
+    scale_fill_manual(values=cbPalette) +
+    geom_beeswarm(aes(fill=diet), cex=6.5, size=1.5, shape=21) +
+    labs(x="", y="") +
+    ylim(ylim) +
+    xlim(0, 2) +
+    theme(
+      legend.position = "none",
+      strip.background = element_blank(),
+      strip.text = element_text(size=text.size),
+      panel.spacing = unit(0, "cm"),
+      panel.border = element_rect(fill=NA),
+      axis.ticks = element_blank(),
+      axis.text = element_blank(),
+      axis.line = element_blank()
+    )
+  
+  g2 <- ggplot(mice.gr, aes(x=diet, y=M, group=sex, colour=sex)) +
+    theme_classic() +
+    geom_line(aes(group=sex)) +
+    geom_point(aes(fill=sex), size=2, shape=22) +
+    labs(x="", y="") +
+    ylim(ylim) +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    scale_colour_manual(values=c("grey60", "black")) +
+    scale_fill_manual(values=c("white", "black")) +
+    scale_x_discrete(position = "top") +
+    theme(
+      panel.border = element_rect(colour="black", linetype="solid", fill=NA),
+      legend.position = "none",
+      axis.ticks = element_blank(),
+      axis.text.y = element_blank(),
+      panel.spacing = unit(0, "cm"),
+      axis.line = element_blank(),
+      axis.text = element_text(size=text.size),
+      plot.margin = unit(c(-0.5,0,0,0),"cm")
+    )
+  
+  g3 <- ggplot(mice.gr, aes(x=sex, y=M, group=diet, colour=diet)) +
+    theme_classic() +
+    geom_line(aes(group=diet)) +
+    geom_point(aes(colour=diet, fill=diet), size=2, shape=22) +
+    labs(x="", y="") +
+    ylim(ylim) +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    scale_colour_manual(values=cbPalette) +
+    scale_fill_manual(values=cbPalette) +
+    scale_x_discrete(position = "bottom") +
+    theme(
+      panel.border = element_rect(colour="black", linetype="solid", fill=NA),
+      legend.position = "none",
+      axis.ticks = element_blank(),
+      axis.text.y = element_blank(),
+      panel.spacing = unit(0, "cm"),
+      axis.line = element_blank(),
+      axis.text = element_text(size=text.size),
+      plot.margin = unit(c(0,0,0.6,0),"cm")
+    )
+  
+  left_col <- g1
+  right_col <- plot_grid(g2, g3, ncol=1, rel_heights = c(1, 1.33))
+  
+  plot_grid(left_col, right_col, ncol=2, rel_widths = c(1, 0.6))
+}
+```
+
+```{r fig_anota, fig.width=6, fig.height=3}
+g <- mds %>%
+  mutate(sex = recode_factor(sex, "m"="male", "f"="female")) %>% 
+  plotAnova2()
+g
+
+ggsave(file.path(fig, "anova.png"), g, "png", width=5, height=3.5)
+```
 
 
 ```{r fit_coefficients2_inter, fig.width=5, fig.height=3.5, echo=FALSE}
@@ -395,8 +477,8 @@ sal_test <- sal[itest, ]
 lm.train <- lm(salary ~ rank + discipline, data=sal_train)
 sal_test <- bind_cols(sal_test, predict(lm.train, sal_test, interval="confidence") %>% as_tibble())
 
-mn <- min(c(sal_test$salary, sal_test$pred))
-mx <- max(c(sal_test$salary, sal_test$pred))
+mn <- min(c(sal_test$salary, sal_test$fit))
+mx <- max(c(sal_test$salary, sal_test$fit))
 g <- sal_test %>% 
   ggplot(aes(x=salary, y=fit, ymin=lwr, ymax=upr)) +
   theme_bw() +
@@ -410,4 +492,64 @@ g <- sal_test %>%
 g
 
 ggsave(file.path(fig, "salaries_prediction.png"), g, "png", width=4, height=4)
+```
+
+
+```{r r2}
+plot_r2 <- function(d) {
+  M <- mean(d$y)
+  mod <- lm(y ~ x, data=d)
+  cf <- coef(mod)
+  R2 <- summary(mod)$r.squared
+  
+  d %>%
+    mutate(pred = predict(mod, d)) %>% 
+  ggplot(aes(x=x, y=y)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_segment(aes(xend=x, yend=pred), colour="red") +
+    geom_segment(aes(xend=x, yend=M), colour="orange", linetype="dashed") +
+    geom_point() +
+    geom_abline(slope=cf[2], intercept = cf[1], colour="red") +
+    geom_hline(yintercept = M, colour="orange", linetype="dashed") +
+    labs(title=sprintf("R2 = %4.2f", R2))
+}
+
+set.seed(61234)
+x <- 1:10
+d1 <- tibble(x = x, y = 1*x + rnorm(10, 5))
+g1 <- plot_r2(d1)
+g1
+
+set.seed(4336)
+d2 <- tibble(x = x, y = 0 + rnorm(10, 5))
+g2 <- plot_r2(d2)
+g2
+
+ggsave(file.path(fig, "r2_large.png"), g1, "png", width=4, height=4)
+ggsave(file.path(fig, "r2_small.png"), g2, "png", width=4, height=4)
+```
+
+
+```{r female_ratio}
+fs <- Salaries %>% 
+  group_by(rank) %>% 
+  summarise(n_female = sum(sex == "Female"), n_male = sum(sex == "Male"), n = n()) %>% 
+  nest(data = c(n_female, n)) %>% 
+  mutate(
+    test = map(data, ~prop.test(.x$n_female, .x$n)),
+    tidied = map(test, broom::tidy)
+  ) %>% 
+  unnest(tidied)
+
+g <- ggplot(fs, aes(x=rank, y=estimate, ymin=conf.low, ymax=conf.high)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  geom_errorbar(width=0.3, colour="grey") +
+  geom_point() +
+  labs(x="Rank", y="Female propotion") +
+  scale_y_continuous(expand=expansion(mult = c(0, 0.05)), limits=c(0, NA))
+
+ggsave(file.path(fig, "female_proportion.png"), g, "png", width=4, height=4)
+
 ```

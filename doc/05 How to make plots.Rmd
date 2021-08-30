@@ -620,3 +620,29 @@ ggsave(paste0(fig, "dynamite_3.png"), plot=g3, device="png", width=2, height=2, 
 
 ```
 
+
+
+```{r colour_blind}
+okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+set.seed(666)
+d1 <- tibble(x = runif(12, min=3, max=9)) %>% mutate(y = 20 + 0.4 * x + rnorm(12, 0, 0.4), strain="S1")
+d2 <- tibble(x = runif(8, min=5, max=11)) %>% mutate(y = 21 + 0.45 * x + rnorm(8, 0, 0.5), strain="S2")
+d3 <- tibble(x = runif(9, min=7, max=10)) %>% mutate(y = 18 + 0.3 * x + rnorm(9, 0, 0.5), strain="S3")
+
+d <- bind_rows(d1, d2, d3)
+
+g1 <- ggplot(d, aes(x=x, y=y, colour=strain)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  geom_point() +
+  labs(x = "Daily calorific input (kcal)", y = "Body mass (g)")
+
+g2 <- g1 + scale_colour_manual(values = okabe_ito_palette)
+
+g1
+g2
+
+ggsave(paste0(fig, "colour_blind_1.png"), plot=g1, device="png", width=4, height=3, dpi=300)
+ggsave(paste0(fig, "colour_blind_2.png"), plot=g2, device="png", width=4, height=3, dpi=300)
+```

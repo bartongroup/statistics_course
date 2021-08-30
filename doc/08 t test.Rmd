@@ -577,15 +577,16 @@ m <- data.frame(
 )
 m$type <- factor(m$type, levels=c("Before", "After"))
 g <- ggplot(m, aes(type, value)) +
+  theme_linedraw() + theme(panel.grid = element_blank()) +
   labs(x="", y="Body mass (g)") +
-  geom_point() +
-  geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) +
-  geom_point() +
   theme(legend.position = "none") +
   scale_color_manual(values=cbPalette)
-g
 
-ggsave(paste0(fig, "ttest_paired.png"), plot=g, device="png", width=2.5, height=3.5, dpi=300)
+g1 <- g + geom_point()
+g2 <- g + geom_point() + geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) + geom_point() 
+
+ggsave(paste0(fig, "ttest_unpaired.png"), plot=g1, device="png", width=2.5, height=3.5, dpi=300)
+ggsave(paste0(fig, "ttest_paired.png"), plot=g2, device="png", width=2.5, height=3.5, dpi=300)
 ```
 
 

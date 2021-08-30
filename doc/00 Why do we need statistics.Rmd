@@ -1,10 +1,6 @@
 ---
 title: "Why do we need statistics"
-output:
-  html_document:
-    css: tabbed_notebook.css
-    fig_width: 3
-    fig_height: 3
+output: html_document
 params: 
   output_dir: "../output"
 ---
@@ -39,6 +35,9 @@ pre code, pre, code {
   word-wrap: initial !important;
 }
 ```
+
+
+
 
 ```{r read_grna}
 X1 <- read.table("../data/WT_lev.tsv", sep="\t")
@@ -169,10 +168,9 @@ ggsave(paste0(fig, "body_temp.png"), plot=g, device="png", width=3.5, height=3.5
 
 
 ```{r tumour_growth_read_data}
-ptpn <- read_tsv("../data/tumour_ptpn.txt") %>%
-  mutate(day = as.numeric(gsub("day", "", X1))) %>%
-  select(-1) %>%
-  setNames(c(paste0("KO_", 1:12), paste0("WT_", 1:12), "day")) %>%
+ptpn <- read_tsv("../data/tumour_ptpn.txt", name_repair = make.names) %>%
+  setNames(c("day", paste0("KO_", 1:12), paste0("WT_", 1:12), "day")) %>% 
+  mutate(day = as.numeric(gsub("day", "", day))) %>%
   gather("sample", "volume", -day) %>%
   separate("sample", c("condition", "replicate"), "_", remove=FALSE) %>%
   filter(!is.na(volume) & volume > 0) %>%
