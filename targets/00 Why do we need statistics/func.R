@@ -1,24 +1,24 @@
-plot_gene <- function(dat, gene, sel=NULL, p.alpha=1) {
-  m <- dat %>% 
+plot_gene_cnt <- function(cnt, gene, sel=NULL, p.alpha=1) {
+  m <- cnt %>% 
     filter(gene_id == gene) %>% 
     pivot_longer(-gene_id, names_to="sample") %>% 
     separate(sample, c("condition", "replicate"), sep="_", remove=FALSE) %>% 
     mutate(condition = fct_relevel(condition, "WT"))
-  if(is.null(sel)) test <- t.test(value~condition, data=m)
   lims <- c(min(m$value), max(m$value))
   
-  
-  mm <- m %>% group_by(condition) %>% summarise(M=mean(value), SD=sd(value), n=n()) %>% mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
-  mm$i <- c(1.3, 1.7)
-  
+  if(!is.null(sel)) m <- m %>% filter(sample %in% sel)
+  #if(is.null(sel)) test <- t.test(value~condition, data=m)
+
   g <- ggplot() +
     theme_bw() +
     scale_fill_manual(values=okabe_ito_palette, guide="none") +
-    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
+    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha, groupOnX=TRUE) +
     labs(x=NULL, y="Read count") +
     scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
     scale_y_continuous(limits = lims)
   if(is.null(sel)) {
+    mm <- m %>% group_by(condition) %>% summarise(M=mean(value), SD=sd(value), n=n()) %>% mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
+    mm$i <- c(1.3, 1.7)
     g <- g +
       geom_errorbar(data=mm, aes(x=i, ymin=M-CI, ymax=M+CI), width=0.15) +
       geom_point(data=mm, aes(x=i, y=M, fill=condition), size=3, shape=22)
@@ -232,11 +232,11 @@ get_mouse_genes <- function(version) {
 }
 
 
-plot_genes <- function(cnt, gene_ids, genes, cex=3) {
+plot_genes_cnt <- function(cnt, gene_ids, genes, cex=3, conditions=c("E12.5", "E16.5", "Adult")) {
   d <- cnt[gene_ids, ] %>%
     as_tibble(rownames = "gene_id") %>% 
     pivot_longer(-gene_id, names_to="sample", values_to="count") %>% 
-    mutate(condition = str_remove(sample, "-\\d") %>% factor(levels=c("E12.5", "E16.5", "Adult"))) %>% 
+    mutate(condition = str_remove(sample, "-\\d") %>% factor(levels=conditions)) %>% 
     left_join(genes, by="gene_id")
   ggplot(d, aes(x=condition, y=count, fill=condition)) +
     theme_bw() +

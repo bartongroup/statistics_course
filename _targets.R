@@ -25,6 +25,7 @@ sesinfo <- list(
 
 c(
   sesinfo,
-  lecture_00()
+  lecture_00(),
+  lecture_01()
 )
 

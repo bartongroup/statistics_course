@@ -25,8 +25,8 @@ lecture_00 <- function() {
     
     # gene expression
     tar_target(gene_1, "yfr017c"),
-    tar_target(fig_grna_expression_1, plot_gene(grna, gene_1)),
-    tar_target(fig_grna_expression_2, plot_gene(grna, gene_1, p.alpha=0.3)),
+    tar_target(fig_grna_expression_1, plot_gene_cnt(grna, gene_1)),
+    tar_target(fig_grna_expression_2, plot_gene_cnt(grna, gene_1, p.alpha=0.3)),
     tar_target(sav_grna_exp_1, gs(pref00, fig_grna_expression_1, 2.1, 3.5)),
     tar_target(sav_grna_exp_2, gs(pref00, fig_grna_expression_2, 2.6, 3.5)),
     
@@ -52,12 +52,12 @@ lecture_00 <- function() {
     
     # Gene examples
     tar_target(genes_examples, c("ENSMUSG00000051951", "ENSMUSG00000009281","ENSMUSG00000013415")),
-    tar_target(fig_mouse_genes, plot_genes(devspine$dsn, genes_examples, mouse_genes, cex=4)),
+    tar_target(fig_mouse_genes, plot_genes_cnt(devspine$dsn, genes_examples, mouse_genes, cex=4)),
     tar_target(sav_mouse_genes, gs(pref00, fig_mouse_genes, 5, 2)),
     
     # Difference between edgeR and t-test
     tar_target(te_examples, c("ENSMUSG00000000416", "ENSMUSG00000020289")),
-    tar_target(fig_te_examples, plot_genes(devspine$dsn2, te_examples, mouse_genes)),
+    tar_target(fig_te_examples, plot_genes_cnt(devspine$dsn2, te_examples, mouse_genes)),
     tar_target(te_examples_data, te_selection %>% filter(gene_id %in% te_examples)),
     tar_target(sav_te_examples, gs(pref00, fig_te_examples, 4, 2)),
     
