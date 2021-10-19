@@ -12,9 +12,8 @@ british.palette <- c(
 )
 
 
-gs <- function(prefix, pl, width, height, dpi=300) {
-  nm <- deparse(substitute(pl)) %>% 
-    str_remove("^fig_")
+gs <- function(prefix, pl, width, height, dpi=300, nm=NULL) {
+  if(is.null(nm)) nm <- deparse(substitute(pl)) %>% str_remove("^fig_") %>% str_remove("^.+\\$")
   file <- file.path(prefix, glue("{nm}.png"))
   ggsave(file, pl, device="png", width=width, height=height, dpi=dpi)
 }

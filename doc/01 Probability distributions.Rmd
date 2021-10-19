@@ -11,7 +11,7 @@ params:
 
 ```{r setup, echo=FALSE}
 root <- "01_probability_distributions"
-source("../R/setup.R")
+source("../R/setup.R.old")
 library(beeswarm)
 knitr::opts_chunk$set(
   warning = FALSE,

@@ -80,3 +80,26 @@ plot_continuous_distributon_cut <- function(lo, up, FUN, ..., dcut=NULL, n=100) 
   }
   g
 }
+
+plot_one_dist <- function(v, name, title, limits, fun=NULL, ..., bins=100, f.bins=100,
+                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50",
+                        fill=fill.colour.mid, brks.x=waiver(), brks.y=waiver(), with.mean=FALSE, with.sd=FALSE) {
+  brks <- seq(limits[1], limits[2], length.out = bins)
+  d <- tibble(x = v)
+  g <- ggplot(d, aes(x=x, y=..density..)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_histogram(breaks=brks, fill=fill) +
+    labs(x=name, y="Density", title=title) +
+    scale_x_continuous(expand=c(0,0), breaks=brks.x) +
+    scale_y_continuous(expand=expansion(mult = c(0, 0.03)), limits=c(0, NA), breaks=brks.y)
+  if(with.outline) g <- g + geom_outline(v, brks, colour=outline.colour)
+  if(!is.null(fun)) {
+    x <- seq(limits[1], limits[2], length.out = f.bins)
+    y <- fun(x, ...)
+    g <- g + geom_line(data=data.frame(x=x, y=y), aes(x, y), size=0.5, alpha=alpha.line)
+  }
+  if(with.mean | with.sd) g <- g + geom_vline(xintercept = mean(v))
+  if(with.sd) g <- g + geom_vline(xintercept = c(mean(v) - sd(v), mean(v) + sd(v)), linetype="dotted")
+  g
+}

@@ -6,8 +6,10 @@ lecture_01 <- function() {
   )
 
   read_data <- list(
-
- 
+    tar_target(baseball, read_tsv("data/baseball.txt")),
+    tar_target(testdist, read_table("data/testdist.dat", col_names=c("value"))),
+    tar_target(diaviper, read_tsv("data/diaviper.txt"))
+    
   )
   
   comp <- list(
@@ -35,8 +37,22 @@ lecture_01 <- function() {
     
     # normal distribution with 1, 2 and 3 sigma
     tar_target(figs_normal_sigmas, plot_normal_sigmas(M=10, S=1.5)),
-    tar_target(sav_normal_sigmas_1, gs(pref01, figs_normal_sigmas$g1, 3, 2.5)),
-    tar_target(sav_normal_sigmas_2, gs(pref01, figs_normal_sigmas$g2, 3, 2.5))
+    tar_target(sav_normal_sigmas_1, gs(pref01, figs_normal_sigmas$normal_sigmas_1, 3, 2.5)),
+    tar_target(sav_normal_sigmas_2, gs(pref01, figs_normal_sigmas$normal_sigmas_2, 3, 2.5)),
+    
+    # baseball players
+    tar_target(fig_baseball_normal, plot_baseball_normal(baseball)),
+    tar_target(sav_baseball_normal, gs(pref01, fig_baseball_normal, 5, 4)),
+    
+    # log-normal distribution
+    tar_target(figs_lognormals, plot_lognormals(testdist)),
+    tar_target(sav_lognormal_lin, gs(pref01, figs_lognormals$lognormal_lin, 3.5, 3)),
+    tar_target(sav_lognormal_lin_1, gs(pref01, figs_lognormals$lognormal_lin_1, 3.5, 3)),
+    tar_target(sav_lognormal_log, gs(pref01, figs_lognormals$lognormal_log, 3.5, 3)),
+    tar_target(sav_lognormal_log_1, gs(pref01, figs_lognormals$lognormal_log_1, 3.5, 3)),
+    tar_target(figs_replicates_loglin, plot_replicates_loglin(diaviper, c("WT_cyto_1", "WT_cyto_2"))),
+    tar_target(sav_replicates_lin, gs(pref01, figs_replicates_loglin$lin, 3, 2.5)),
+    tar_target(sav_replicates_log, gs(pref01, figs_replicates_loglin$log, 3, 2.5))
   )
   
   
