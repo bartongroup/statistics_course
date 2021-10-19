@@ -122,3 +122,89 @@ plot_replicates_loglin <- function(d, reps) {
     log = plot_xy(d, log.scale = TRUE)
   )
 }
+
+plot_poisson_plates_dist <- function(seed=226, n=20, m=7) {
+  set.seed(seed)
+
+  d <- tibble(
+    plate = 1:n,
+    cnt = rpois(n, m)
+  ) 
+  
+  g1 <- ggplot(d, aes(plate, cnt)) +
+    theme_classic() +
+    #geom_segment(aes(x=plate, xend=plate, y=cnt, yend=0), colour="grey80") +
+    geom_point(shape=22, fill=fill.colour) +
+    scale_x_continuous(breaks=c(1,5,10,15,20)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03)), limits=c(0, NA), breaks=2*1:10) +
+    labs(x="Plate", y="Count")
+
+  x <- 0:16
+  d <- data.frame(
+    x = x,
+    y = dpois(x, m)
+  )
+  g2 <- ggplot(d, aes(x, y)) +
+    theme_classic() +
+    geom_col(fill=fill.colour, colour="black", width=0.8) +
+    scale_x_continuous(breaks=0:16) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+    labs(x = "k", y = "P(X = k)")
+  
+  list(
+    poisson_plates = g1,
+    poisson_dist = g2
+  )
+  
+}
+
+
+plot_poisson_dist_examples <- function(mus = c(0.3, 1, 4, 10)) {
+  map(mus, function(mu) {
+    xp <- 0:20
+    p <- tibble(
+      x = xp,
+      y = dpois(xp, mu)
+    )
+    xn <- seq(0, 20, 0.01)
+    d <- tibble(
+      x = xn,
+      y = dnorm(xn, mu, sqrt(mu))
+    )
+    
+    ggplot() +
+      theme_bw() +
+      theme(panel.grid = element_blank()) +
+      geom_segment(data=p, aes(x=x, xend=x, y=y, yend=0), colour="grey80") +
+      geom_point(data=p, aes(x, y), shape=21, fill="white") +
+      geom_line(data=d, aes(x, y), colour="red") +
+      #stat_function(fun=dnorm, args=list(mean=mu, sd=sqrt(mu)), colour="red") +
+      scale_x_continuous(breaks=c(0,5,10,15,20)) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.07)), limits = c(0, NA)) +
+      labs(x="k", y="")
+  }) %>% 
+    plot_grid(plotlist = ., ncol = 1, align = "v")
+}
+
+
+plot_horse_kicks <- function() {
+  h <- c(144, 91, 32, 11, 2, 0)
+  x <- 0:5
+  mu <- sum(h * x) / sum(h)
+  d <- tibble(
+    x = x,
+    h = h,
+    s = sqrt(h),
+    p = dpois(x, mu) * sum(h)
+  )
+  
+  g <- ggplot(d) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_col(aes(x, p), fill=fill.colour, width=0.7, colour="grey30") +
+    geom_point(aes(x, h), size=2) +
+    geom_errorbar(aes(x=x, ymin=h-s, ymax=h+s), width=0.1) +
+    scale_x_continuous(breaks=0:5) +
+    scale_y_continuous(expand=c(0,0), limits=c(0,160)) +
+    labs(x="Deaths per corps-year", y="Count")
+}

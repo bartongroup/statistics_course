@@ -52,7 +52,16 @@ lecture_01 <- function() {
     tar_target(sav_lognormal_log_1, gs(pref01, figs_lognormals$lognormal_log_1, 3.5, 3)),
     tar_target(figs_replicates_loglin, plot_replicates_loglin(diaviper, c("WT_cyto_1", "WT_cyto_2"))),
     tar_target(sav_replicates_lin, gs(pref01, figs_replicates_loglin$lin, 3, 2.5)),
-    tar_target(sav_replicates_log, gs(pref01, figs_replicates_loglin$log, 3, 2.5))
+    tar_target(sav_replicates_log, gs(pref01, figs_replicates_loglin$log, 3, 2.5)),
+    
+    # Poisson distribution
+    tar_target(figs_plates, plot_poisson_plates_dist()),
+    tar_target(sav_plates_plates, gs(pref01, figs_plates$poisson_plates, 3.5, 2.5)),
+    tar_target(sav_plates_dist, gs(pref01, figs_plates$poisson_dist, 3.5, 2.5)),
+    tar_target(fig_poisson_examples, plot_poisson_dist_examples()),
+    tar_target(sav_poisson_ex, gs(pref01, fig_poisson_examples, 3, 5)),
+    tar_target(fig_horse_kicks, plot_horse_kicks()),
+    tar_target(sav_horse_kicks, gs(pref01, fig_horse_kicks, 4, 5))
   )
   
   
