@@ -61,7 +61,19 @@ lecture_01 <- function() {
     tar_target(fig_poisson_examples, plot_poisson_dist_examples()),
     tar_target(sav_poisson_ex, gs(pref01, fig_poisson_examples, 3, 5)),
     tar_target(fig_horse_kicks, plot_horse_kicks()),
-    tar_target(sav_horse_kicks, gs(pref01, fig_horse_kicks, 4, 5))
+    tar_target(sav_horse_kicks, gs(pref01, fig_horse_kicks, 4, 5)),
+    
+    # Binomial distribution
+    tar_target(figs_binomial, plot_binoms()),
+    tar_target(sav_binom, gs(pref01, figs_binomial$binomial_example, 4, 3)),
+    tar_target(sav_binom_norm, gs(pref01, figs_binomial$binomial_example_normal, 4, 3)),
+    tar_target(sav_binom_poiss, gs(pref01, figs_binomial$binomial_example_poisson, 4, 3)),
+    
+    # R
+    tar_target(figs_r_1, plot_r_dists()),
+    tar_target(sav_r_norm, gs(pref01, figs_r_1$dnorm, 2, 1.4)),
+    tar_target(sav_r_norm2, gs(pref01, figs_r_1$dnorm2, 2, 1.4)),
+    tar_target(sav_r_binom, gs(pref01, figs_r_1$dbinom, 2, 1.4))
   )
   
   

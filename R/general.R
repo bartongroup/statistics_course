@@ -103,3 +103,47 @@ plot_one_dist <- function(v, name, title, limits, fun=NULL, ..., bins=100, f.bin
   if(with.sd) g <- g + geom_vline(xintercept = c(mean(v) - sd(v), mean(v) + sd(v)), linetype="dotted")
   g
 }
+
+
+plot_fun <- function(FUN, ..., x.grid, cut.lo=NULL, cut.up=NULL, name="") {
+  x <- x.grid
+  x.lo <- x[1]
+  x.up <- x[length(x)]
+  y <- FUN(x, ...)
+  dff <- data.frame(
+    x = c(x.lo, x, x.up),
+    y = c(0, y, 0)
+  )
+  
+  g <- ggplot(dff, aes(x=x, y=y)) +
+    theme_classic() +
+    geom_polygon(colour="black", fill=fill.colour) +
+    labs(x=name, y="Density") +
+    scale_x_continuous(limits=c(x.lo, x.up), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dff$y)*1.03), expand=c(0,0))
+  
+  if(!is.null(cut.lo)) {
+    xx <- x[x <= cut.lo]
+    df.lo <- data.frame(
+      x = c(x.lo, xx, cut.lo),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.lo, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  
+  if(!is.null(cut.up)) {
+    xx <- x[x >= cut.up]
+    df.up <- data.frame(
+      x = c(cut.up, xx, x.up),
+      y = c(0, FUN(xx, ...), 0)
+    )
+    g <- g + geom_polygon(data=df.up, aes(x, y), colour="black", fill=fill.colour.dark)
+  }
+  g
+}
+
+
+se <- function(x) {
+  sd(x, na.rm=TRUE) / sqrt(length(x))
+}
+

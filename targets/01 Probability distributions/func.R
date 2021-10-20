@@ -6,8 +6,7 @@ plot_2dice_binomial <- function() {
   dist$y <- dist$n / sum(dist$n)
   
   g <- ggplot(dist, aes(x, y)) +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_clean +
     geom_segment(aes(x=x, y=y, xend=x, yend=0), colour="grey") +
     geom_point(shape=21, fill="white", colour="black") +
     geom_text(aes(label=n), nudge_y=0.01) +
@@ -33,8 +32,7 @@ plot_normal_sigmas <- function(M, S) {
   )
   
   g1 <- ggplot() +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_clean +
     geom_segment(data=lns1, aes(x=x, y=y, xend=x, yend=0), colour="grey") +
     geom_line(data=dn, aes(x, y), colour="black") +
     labs(x="x", y="f(x)") +
@@ -70,8 +68,7 @@ plot_baseball_normal <- function(baseball) {
   )
   
   ggplot(dst, aes(height, n)) +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_clean +
     geom_segment(aes(xend=height, yend=0), colour="grey60") +
     geom_point(shape=21, fill="white", size=2) +
     scale_y_continuous(expand=expansion(mult = c(0, 0.03)), limits=c(0, NA)) +
@@ -107,8 +104,7 @@ plot_xy <- function(d, log.scale=FALSE) {
   }
   
   ggplot(d, aes(x=x, y=y)) +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_clean +
     geom_point(size = 0.4, alpha = 0.4) +
     labs(x=xlab, y=ylab)
 }
@@ -173,8 +169,7 @@ plot_poisson_dist_examples <- function(mus = c(0.3, 1, 4, 10)) {
     )
     
     ggplot() +
-      theme_bw() +
-      theme(panel.grid = element_blank()) +
+      theme_clean +
       geom_segment(data=p, aes(x=x, xend=x, y=y, yend=0), colour="grey80") +
       geom_point(data=p, aes(x, y), shape=21, fill="white") +
       geom_line(data=d, aes(x, y), colour="red") +
@@ -199,12 +194,89 @@ plot_horse_kicks <- function() {
   )
   
   g <- ggplot(d) +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_clean +
     geom_col(aes(x, p), fill=fill.colour, width=0.7, colour="grey30") +
     geom_point(aes(x, h), size=2) +
     geom_errorbar(aes(x=x, ymin=h-s, ymax=h+s), width=0.1) +
     scale_x_continuous(breaks=0:5) +
     scale_y_continuous(expand=c(0,0), limits=c(0,160)) +
     labs(x="Deaths per corps-year", y="Count")
+}
+
+
+
+gen_binom <- function(size, prob) {
+  tibble(
+    x = 0:size,
+    y = dbinom(x, size=size, prob=prob)
+  )
+}
+
+
+plot_binoms <- function() {
+  g1 <- gen_binom(8, 0.5) %>% 
+    ggplot() +
+    theme_clean +
+    geom_col(aes(x, y), fill=fill.colour, width=0.7, colour="grey30") +
+    scale_x_continuous(breaks=0:8) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
+    labs(x="Number of successes", y="Probability")
+  
+  
+  g2 <- gen_binom(100, 0.5) %>% 
+    ggplot() +
+    theme_clean +
+    geom_segment(aes(x=x, xend=x, y=y, yend=0), colour="grey70") +
+    geom_point(aes(x=x, y=y), size=2) +
+    stat_function(fun=dnorm, args=list(mean=50, sd=sqrt(25)), colour="red") +
+    scale_x_continuous(limits=c(35, 65)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
+    labs(x="Number of successes", y="Probability")
+  
+  mu <- 100 * 0.01
+  g3 <- gen_binom(100, 0.01) %>% 
+    mutate(p = dpois(x, mu)) %>% 
+    ggplot() +
+    theme_clean +
+    geom_col(aes(x, p), fill=fill.colour, width=0.7, colour="grey30") +
+    geom_segment(aes(x=x, xend=x, y=y, yend=0), colour="grey70") +
+    geom_point(aes(x, y), size=2) +
+    scale_x_continuous(breaks=0:10, limits=c(-0.5,10)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0,0.4)) +
+    labs(x="Number of successes", y="Probability")
+
+  list(
+    binomial_example = g1,
+    binomial_example_normal = g2,
+    binomial_example_poisson = g3
+  )
+}
+
+
+plot_r_dists <- function() {
+  g1 <- plot_fun(dnorm, x.grid=seq(-4, 4, 0.01), cut.up = 1.7) +
+    theme_d
+
+  g2 <- plot_fun(dnorm, x.grid=seq(-4, 4, 0.01), cut.lo = -qnorm(0.975), cut.up = qnorm(0.975)) +
+    theme_d
+
+  d <- tibble(
+    k = 0:8,
+    p = dbinom(k, 8, 0.5)
+  )
+  
+  g3 <- ggplot(d, aes(x=k, y=p)) +
+    theme_classic() +
+    theme_d +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
+    geom_col(fill=fill.colour, colour="black", width=0.6, size=0.2) +
+    labs(x=NULL, y=NULL) +
+    geom_col(data=d[7:9, ], fill=fill.colour.dark, colour="black", width=0.6, size=0.2)
+
+  list(
+    dnorm = g1,
+    dnorm2 = g2,
+    dbinom = g3
+    
+  )
 }

@@ -11,6 +11,17 @@ british.palette <- c(
   N.Irish = rgb(20, 185, 90, max=255)
 )
 
+theme_clean <- 
+  ggplot2::theme_bw() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank())
+
+theme_d <- ggplot2::theme(
+  axis.title = ggplot2::element_blank(),
+  axis.ticks = ggplot2::element_blank(),
+  axis.text = ggplot2::element_blank(),
+  axis.line.y = ggplot2::element_blank(),
+  panel.border = ggplot2::element_blank()
+)
 
 gs <- function(prefix, pl, width, height, dpi=300, nm=NULL) {
   if(is.null(nm)) nm <- deparse(substitute(pl)) %>% str_remove("^fig_") %>% str_remove("^.+\\$")
