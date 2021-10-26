@@ -82,13 +82,12 @@ plot_continuous_distributon_cut <- function(lo, up, FUN, ..., dcut=NULL, n=100) 
 }
 
 plot_one_dist <- function(v, name, title, limits, fun=NULL, ..., bins=100, f.bins=100,
-                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey50",
+                        maxy=NA, alpha.line=1, with.outline=FALSE, outline.colour="grey30",
                         fill=fill.colour.mid, brks.x=waiver(), brks.y=waiver(), with.mean=FALSE, with.sd=FALSE) {
   brks <- seq(limits[1], limits[2], length.out = bins)
   d <- tibble(x = v)
   g <- ggplot(d, aes(x=x, y=..density..)) +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
+    theme_dist +
     geom_histogram(breaks=brks, fill=fill) +
     labs(x=name, y="Density", title=title) +
     scale_x_continuous(expand=c(0,0), breaks=brks.x) +

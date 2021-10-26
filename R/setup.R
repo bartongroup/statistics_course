@@ -15,6 +15,16 @@ theme_clean <-
   ggplot2::theme_bw() +
   ggplot2::theme(panel.grid = ggplot2::element_blank())
 
+theme_dist <- ggplot2::theme_classic() +
+  ggplot2::theme(
+    axis.title.y = ggplot2::element_blank(),
+    axis.ticks.y = ggplot2::element_blank(),
+    axis.text.y = ggplot2::element_blank(),
+    axis.line.y = ggplot2::element_blank(),
+    panel.border = ggplot2::element_blank(),
+    plot.title = ggplot2::element_text(hjust = 0.5)
+  )
+
 theme_d <- ggplot2::theme(
   axis.title = ggplot2::element_blank(),
   axis.ticks = ggplot2::element_blank(),
