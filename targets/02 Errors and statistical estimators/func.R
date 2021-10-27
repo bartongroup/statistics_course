@@ -21,6 +21,53 @@ plot_mini_normal <- function(n = 10000) {
 }
 
 
+plot_counting_2d <- function(seed=124, n=100, nd=5) {
+  set.seed(seed)
+  d <- tibble(
+    x = runif(n),
+    y = runif(n)
+  )
+  brks <- seq(0, 1, length.out = nd + 1)
+  delta <- brks[2] - brks[1]
+
+  # count in boxes
+  dc <- d %>% 
+    mutate(
+      px = cut(x, breaks = brks, labels=brks[1:nd]),
+      py = cut(y, breaks = brks, labels=brks[1:nd])
+    ) %>% 
+    group_by(px, py) %>% 
+    tally() %>% 
+    mutate_at(vars(px, py), ~as.numeric(as.character(.x)))
+  
+  g1 <- ggplot() +
+    theme_classic() +
+    theme(
+      axis.title = element_blank(),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text = element_blank(),
+      panel.border = element_rect(fill=NA)
+    ) +
+    scale_x_continuous(expand = c(0, 0), limits = c(0, 1)) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+    geom_point(data=d, aes(x=x, y=y))
+  
+  g2 <- g1 +
+    geom_vline(xintercept = brks, colour = "grey70") +
+    geom_hline(yintercept = brks, colour = "grey70")
+  
+  g3 <- g2 +
+    geom_text(data = dc, aes(x = px, y=py + delta, label=n, hjust=-0.8, vjust=1.5), colour="royalblue2")
+  
+  list(
+    poiss2d = g1,
+    poiss2d_grid = g2,
+    poiss2d_grid_count = g3
+  )
+}
+
+
 
 plot_counting_error <- function(seed=2002, n=10000, mu=11, lims=c(0, 23)) {
   set.seed(seed)

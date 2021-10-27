@@ -20,6 +20,10 @@ lecture_02 <- function() {
     tar_target(sav_mini_normal, gs(pref02, fig_mini_normal, 2, 2)),
     
     # counting error
+    tar_target(figs_poiss2d, plot_counting_2d(seed=154, n=200, nd=5)),
+    tar_target(sav_poiss2d_1, gs(pref02, figs_poiss2d$poiss2d, 5, 5)),
+    tar_target(sav_poiss2d_2, gs(pref02, figs_poiss2d$poiss2d_grid, 5, 5)),
+    tar_target(sav_poiss2d_3, gs(pref02, figs_poiss2d$poiss2d_grid_count, 5, 5)),
     tar_target(fig_counting_error, plot_counting_error()),
     tar_target(sav_counting_error, gs(pref02, fig_counting_error, 4, 4.5)),
     
