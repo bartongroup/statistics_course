@@ -27,39 +27,39 @@ lecture_00 <- function() {
     tar_target(gene_1, "yfr017c"),
     tar_target(fig_grna_expression_1, plot_gene_cnt(grna, gene_1)),
     tar_target(fig_grna_expression_2, plot_gene_cnt(grna, gene_1, p.alpha=0.3)),
-    tar_target(sav_grna_exp_1, gs(pref00, fig_grna_expression_1, 2.1, 3.5)),
-    tar_target(sav_grna_exp_2, gs(pref00, fig_grna_expression_2, 2.6, 3.5)),
+    tar_target(sav_grna_exp_1, gs(fig_grna_expression_1, pref00, 2.1, 3.5)),
+    tar_target(sav_grna_exp_2, gs(fig_grna_expression_2, pref00, 2.6, 3.5)),
     
     # Poisson counts on plates
     tar_target(fig_poisson_plates, plot_poisson_plates(seed=223)),
-    tar_target(sav_poisson_plates, gs(pref00, fig_poisson_plates, width=3, height=3)),
+    tar_target(sav_poisson_plates, gs(fig_poisson_plates, pref00, width=3, height=3)),
     
     # Normal body temperature
     tar_target(fig_body_temperature, plot_body_temperature(body)),
-    tar_target(sav_body_temperature, gs(pref00, fig_body_temperature, width=3.5, height=3.5)),
+    tar_target(sav_body_temperature, gs(fig_body_temperature, pref00, width=3.5, height=3.5)),
     
     # Mouse tumour
     tar_target(fig_tumour_growth, plot_tumour_lines(tumour_ptpn)),
-    tar_target(sav_tumour_growth, gs(pref00, fig_tumour_growth, 7, 3)),
+    tar_target(sav_tumour_growth, gs(fig_tumour_growth, pref00, 7, 3)),
     
     # Clustering devspine data
     tar_target(fig_clustering_devspine, plot_clustering_devspine(devspine$ds)),
-    tar_target(sav_clustering_devspine, gs(pref00, fig_clustering_devspine, 3, 3.5)),
+    tar_target(sav_clustering_devspine, gs(fig_clustering_devspine, pref00, 3, 3.5)),
     
     # Distance matrix for devspine data
     tar_target(fig_matrix_devspine, plot_distance_matrix(devspine$ds, devspine$metadata)),
-    tar_target(sav_matrix_devspine, gs(pref00, fig_matrix_devspine, 4, 3)),
+    tar_target(sav_matrix_devspine, gs(fig_matrix_devspine, pref00, 4, 3)),
     
     # Gene examples
     tar_target(genes_examples, c("ENSMUSG00000051951", "ENSMUSG00000009281","ENSMUSG00000013415")),
     tar_target(fig_mouse_genes, plot_genes_cnt(devspine$dsn, genes_examples, mouse_genes, cex=4)),
-    tar_target(sav_mouse_genes, gs(pref00, fig_mouse_genes, 5, 2)),
+    tar_target(sav_mouse_genes, gs(fig_mouse_genes, pref00, 5, 2)),
     
     # Difference between edgeR and t-test
     tar_target(te_examples, c("ENSMUSG00000000416", "ENSMUSG00000020289")),
     tar_target(fig_te_examples, plot_genes_cnt(devspine$dsn2, te_examples, mouse_genes)),
     tar_target(te_examples_data, te_selection %>% filter(gene_id %in% te_examples)),
-    tar_target(sav_te_examples, gs(pref00, fig_te_examples, 4, 2)),
+    tar_target(sav_te_examples, gs(fig_te_examples, pref00, 4, 2)),
     
     # Drug data table fragment and model
     tar_target(drug_table, drug_data$drugs %>% 

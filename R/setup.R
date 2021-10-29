@@ -33,7 +33,8 @@ theme_d <- ggplot2::theme(
   panel.border = ggplot2::element_blank()
 )
 
-gs <- function(prefix, pl, width, height, dpi=300, nm=NULL) {
+
+gs <- function(pl, prefix, width, height, nm=NULL, dpi=300) {
   if(is.null(nm)) nm <- deparse(substitute(pl)) %>% str_remove("^fig_") %>% str_remove("^.+\\$")
   file <- file.path(prefix, glue("{nm}.png"))
   ggsave(file, pl, device="png", width=width, height=height, dpi=dpi)

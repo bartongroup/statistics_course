@@ -146,3 +146,74 @@ se <- function(x) {
   sd(x, na.rm=TRUE) / sqrt(length(x))
 }
 
+
+plot_distribution_cut <- function(x, cut=NULL, locut=NULL, side="upper", brks=seq(-1, 1, 0.01), 
+                                xlab="", fill=fill.colour.mid, fill.cut=fill.colour.dark,
+                                x.brks=waiver(), outline.colour="black") {
+  df <- data.frame(x = x)
+  
+  dst <- ggplot(df, aes(x=x, y=..density..)) +
+    theme_clean +
+    scale_x_continuous(expand=c(0,0), breaks=x.brks) +
+    geom_histogram(breaks=brks, fill=fill) +
+    labs(x=xlab, y="Normalized frequency")
+  maxh <- max(ggplot_build(dst)$data[[1]]$density)  # max density in histogram
+  dst <- dst + scale_y_continuous(expand=c(0,0), limits=c(0, maxh*1.03))
+  
+  gout <- geom_outline(x, brks, size=0.3, colour=outline.colour)
+  
+  if(!is.null(cut)) {
+    cut <- brks[which.min(abs(brks - cut))]
+    cut.lo <- cut
+    cut.up <- cut
+    if(side == "both") cut.lo <- -cut.lo
+    if(side == "two") cut.lo <- brks[which.min(abs(brks - locut))]
+    df.cut.lower <- df[df$x <= cut.lo,, drop=FALSE]
+    df.cut.upper <- df[df$x >= cut.up,, drop=FALSE]
+    norm.fac.lower <- nrow(df.cut.lower) / nrow(df)
+    norm.fac.upper <- nrow(df.cut.upper) / nrow(df)
+    g.upper <- geom_histogram(data=df.cut.upper, breaks=brks, fill=fill.cut, aes(y=..density.. * norm.fac.upper))
+    g.lower <- geom_histogram(data=df.cut.lower, breaks=brks, fill=fill.cut, aes(y=..density.. * norm.fac.lower))
+    if(side == "upper") {
+      return(dst + g.upper + gout)
+    } else if (side == "lower") {
+      return(dst + g.lower + gout)
+    } else {
+      return(dst + g.upper + g.lower + gout)
+    }
+  } else {
+    return(dst + gout)
+  }
+}
+
+
+# generate tree plots of t-distribution
+# t - basic plot
+# t.one - one tail
+# t.two - two tails
+t_cut <- function(t.obs, dof) {
+  xx <- seq(-5, 5, 0.01)
+  yy <- dt(xx, dof)
+  dft <- tibble(
+    x = c(-5, xx, 5),
+    y = c(0, yy, 0)
+  )
+  xx <- seq(t.obs, 5, 0.01)
+  df <- tibble(
+    x = c(t.obs, xx, max(xx), t.obs),
+    y = c(0, dt(xx, dof), 0, 0)
+  )
+  df1 <- df %>% mutate(x = -x)
+
+  g1 <- ggplot(df, aes(x=x, y=..density..)) +
+    theme_dist +
+    #geom_line(data=dft, aes(x, y), colour="blue") +
+    geom_polygon(data=dft, aes(x, y), colour="black", fill=fill.colour) +
+    labs(x="t", y="Density") +
+    scale_x_continuous(limits=c(-5, 5), expand=c(0,0)) +
+    scale_y_continuous(limits=c(0, max(dft$y)*1.03), expand=c(0,0))
+  g2 <- g1 + geom_polygon(data=df, aes(x, y), colour="black", fill=fill.colour.dark)
+  g3 <- g2 + geom_polygon(data=df1, aes(x, y), colour="black", fill=fill.colour.dark)
+  list(t=g1, t.one=g2, t.two=g3)
+}
+
