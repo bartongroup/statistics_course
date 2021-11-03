@@ -153,7 +153,7 @@ plot_distribution_cut <- function(x, cut=NULL, locut=NULL, side="upper", brks=se
   df <- data.frame(x = x)
   
   dst <- ggplot(df, aes(x=x, y=..density..)) +
-    theme_clean +
+    theme_dist +
     scale_x_continuous(expand=c(0,0), breaks=x.brks) +
     geom_histogram(breaks=brks, fill=fill) +
     labs(x=xlab, y="Normalized frequency")

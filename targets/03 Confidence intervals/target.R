@@ -20,8 +20,10 @@ lecture_03 <- function() {
     tar_target(f_4_samp_dist, plot_4_sampling_distributions(samp_dists) %>% gs(pref03, 4, 4, "four_sampling_dist")),
     
     # CI of the mean
-    tar_target(f_dist_ci_mean, plot_dist_ci(samp_dists$Mean, brks=seq(10, 30, 0.1)) %>% gs(pref03, 3.5, 3, "sampling_distributions_mean_cut")),
-    tar_target(f_dist_ci_t, plot_dist_ci(samp_dists$t, brks=seq(-6, 6, 0.05)) %>% gs(pref03, 3.5, 3, "sampling_distributions_t_cut")),
+    tar_target(f_dist_ci_mean, plot_dist_ci(samp_dists$Mean, brks=seq(10, 30, 0.1))),
+    tar_target(s_dist_ci_mean, f_dist_ci_mean %>% gs(pref03, 3.5, 3, "sampling_distributions_mean_cut")),
+    tar_target(s_dist_ci_mean_small, (f_dist_ci_mean + theme_dist) %>% gs(pref03, 2, 1.5, "sampling_distributions_mean_cut_small")),
+    tar_target(s_dist_ci_t, plot_dist_ci(samp_dists$t, brks=seq(-6, 6, 0.05)) %>% gs(pref03, 3.5, 3, "sampling_distributions_t_cut")),
     
     # t-distribution
     tar_target(s_t_cut, t_cut(qt4, 4)$t.two %>% gs(pref03, 3.5, 3, "t_distribution_cut")),
