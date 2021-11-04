@@ -223,7 +223,7 @@ plot_samp_propotion <- function() {
   
 }
 
-
+# not used anymore
 wald_proportion <- function(n, S, alpha=0.95) {
   Z <- qnorm(1 - (1 - alpha) / 2)
   Sp <- S + Z^2/2
@@ -249,18 +249,27 @@ plot_mice_survival <- function() {
     values = c(10, 8, 6, 2, 1, 0)
   )
   P <- inverse.rle(sur) / 10
-  d <- tibble(
-    day = seq_along(P) - 1,
-    prop = P
-  ) %>% 
-    nest(data = prop) %>%
+  
+  d <- map_dfr(c(10, 100), function(N) {
+    tibble(
+      day = seq_along(P) - 1,
+      prop = P,
+      n = N,
+      s = N * P
+    )
+  }) %>% 
+    # need to differentiate rows for nest
+    mutate(id = row_number()) %>% 
+    nest(data = c(s, n)) %>%
     mutate(
-      x10 = map(data, ~wald_proportion(10, 10*.x$prop)),
-      x100 = map(data, ~wald_proportion(100, 100*.x$prop))
+      tst = map(data, ~prop.test(.x$s, .x$n)),
+      tidied = map(tst, broom::tidy),
     ) %>%
-    unnest(c(data, x10, x100))
+    unnest(c(data, tidied)) %>% 
+    select(day, prop, s, n, conf.low, conf.high) %>% 
+    pivot_wider(id_cols = c(day, prop), names_from = n, values_from = c(conf.low, conf.high))
   
-  
+
   g0 <- ggplot(d) +
     theme_clean +
     scale_x_continuous(expand=c(0,0), limits=c(0,20)) +
@@ -270,11 +279,11 @@ plot_mice_survival <- function() {
   g1 <- g0 + geom_step(aes(x=day, y=prop), size=1.1)
   
   g2 <- g1 +
-    geom_ribbon(aes(x=day, ymin=prop_lo_10, ymax=prop_up_10), stat="stepribbon", fill=fill.colour) +
+    geom_ribbon(aes(x=day, ymin=conf.low_10, ymax=conf.high_10), stat="stepribbon", fill=fill.colour) +
     geom_step(aes(x=day, y=prop), size=1.1) 
   
   g3 <- g2 +
-    geom_ribbon(aes(x=day, ymin=prop_lo_100, ymax=prop_up_100), stat="stepribbon", fill=fill.colour.dark) +
+    geom_ribbon(aes(x=day, ymin=conf.low_100, ymax=conf.high_100), stat="stepribbon", fill=fill.colour.dark) +
     geom_step(aes(x=day, y=prop), size=1.1)
   
   list(
