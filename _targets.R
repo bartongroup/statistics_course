@@ -6,9 +6,11 @@ plan(callr)
 source("R/setup.R")
 source("R/general.R")
 
-packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforce", "lemon", "dendextend", "ggalt", "gsl", "edgeR", "limma","glue", "tidyverse")
+packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforce", "lemon", "dendextend", "ggalt", "gsl", "edgeR", "limma","glue", "furrr", "tidyverse")
 tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
+
+#future::plan(multicore)
 
 # for interactive session only
 # sapply(packages, library, character.only=TRUE)
@@ -31,6 +33,7 @@ c(
   lecture_03(),
   lecture_04(),
   lecture_05(),
-  lecture_06()
+  lecture_06(),
+  lecture_07()
 )
 
