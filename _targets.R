@@ -6,7 +6,7 @@ plan(callr)
 source("R/setup.R")
 source("R/general.R")
 
-packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforce", "lemon", "dendextend", "ggalt", "gsl", "edgeR", "limma","glue", "furrr", "tidyverse")
+packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforce", "lemon", "dendextend", "gganimate", "ggalt", "gsl", "edgeR", "limma","glue", "furrr", "tidyverse")
 tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
 
@@ -34,6 +34,7 @@ c(
   lecture_04(),
   lecture_05(),
   lecture_06(),
-  lecture_07()
+  lecture_07(),
+  lecture_08()
 )
 
