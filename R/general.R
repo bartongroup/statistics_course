@@ -218,7 +218,7 @@ t_cut <- function(t.obs, dof) {
 }
 
 
-plot_mice_box <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=4, size=2, m.width=0.3,
+plot_mice_box <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=1, size=2, m.width=0.3,
                         with.means=TRUE, with.boxes=FALSE, with.shape=FALSE, palette=british.palette) {
   g <- ggplot() +
     theme_clean +
