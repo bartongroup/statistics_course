@@ -75,47 +75,7 @@ getMeans <- function(mice, value="Mass", width=0.6) {
 }
 
 
-get_means <- function(mice, width, what="Mass") {
-  m <- mice %>% 
-    mutate(val = get(what)) %>% 
-    mutate(grand_mean = mean(val)) %>% 
-    mutate(group = as.integer(Country)) %>% 
-    group_by(group) %>% 
-    mutate(
-      N = n(),
-      n = seq_along(val),
-      x = group + width*(n - N/2 - 1/2) / (N - 1),
-      Mean = mean(val)
-    ) %>% 
-    ungroup()
-  M <- m %>% 
-    select(Country, Mean, x = group) %>% 
-    distinct()
-  list(mice = m, means = M)
-}
 
-
-plot_variance <- function(mice, within=TRUE, width=0.6) {
-  m <- get_means(mice, width)
-  gm <- m$mice$grand_mean[1]
-  g <- ggplot(m$mice) + theme_clean
-  if(within) {
-    g <- g + geom_segment(aes(x=x, xend=x, y=Mean, yend=Mass), colour="grey70")
-  } else {
-    g <- g +
-      geom_line(data=data.frame(x=c(1-width/2,4+width/2), y=c(gm, gm)), aes(x,y), linetype="dotted") +
-      geom_segment(aes(x=x, xend=x, y=grand_mean, yend=Mean), colour="grey70")
-  }
-  g <- g +
-    geom_segment(data=m$means, aes(x=x-width/2, xend=x+width/2, y=Mean, yend=Mean, colour=Country)) +
-    geom_point(aes(x=x, y=Mass, fill=Country), colour="grey30", shape=21, size=1.8) +
-    theme(legend.position = "none", axis.ticks.x = element_blank()) +
-    scale_x_continuous(breaks=c(1,2,3,4), labels=COUNTRIES) +
-    labs(x="", y="Body mass (g)") +
-    scale_colour_manual(values=british.palette) +
-    scale_fill_manual(values=british.palette)
-  g
-}
 
 generate_F_mice <- function(mice, seed=33, nsim=100000) {
   set.seed(seed)
