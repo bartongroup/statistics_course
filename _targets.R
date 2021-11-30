@@ -1,8 +1,8 @@
 library(targets)
 library(tarchetypes)
-library(future)
-library(future.callr)
-plan(callr)
+#library(future)
+#library(future.callr)
+#plan(callr)
 source("R/setup.R")
 source("R/general.R")
 
