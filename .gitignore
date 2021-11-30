@@ -5,8 +5,7 @@
 .DS_Store
 _targets
 cache
-doc/*cache/
-doc/*files/
-doc/*html
+doc
 fig
 figures
+R/setup.R.old
