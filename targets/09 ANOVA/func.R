@@ -101,17 +101,20 @@ generate_no_effect_anova <- function(mice, seed=8) {
 }
 
 
-plot_anova_2 <- function(mice, ylim=c(0,40), text.size=10) {
-  grand.mean <- mean(mice$Mass)
-  mice.gr <- mice %>% group_by(Country, Colour) %>% summarise(M = mean(Mass))
+plot_anova_2 <- function(m, ylim=c(0,40), text.size=10, col_var="Country", row_var="Colour", val_var="Mass", palette=british.palette) {
+  mice <- m %>% 
+    mutate(col = get(col_var), row = get(row_var), val = get(val_var))
   
-  g1 <- ggplot(mice, aes(x=1, y=Mass)) +
+  grand.mean <- mean(mice$val)
+  mice.gr <- mice %>% group_by(col, row) %>% summarise(M = mean(val))
+  
+  g1 <- ggplot(mice, aes(x=1, y=val)) +
     theme_classic() +
-    facet_grid(Colour ~ Country, switch="both") +
+    facet_grid(row ~ col, switch="both") +
     geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
     #geom_boxplot(aes(fill=Country), alpha=0.5, outlier.shape = NA, width=0.7) +
-    scale_fill_manual(values=british.palette) +
-    geom_beeswarm(aes(fill=Country), cex=3, size=1.5, shape=21) +
+    scale_fill_manual(values=palette) +
+    geom_beeswarm(aes(fill=col), cex=3, size=1.5, shape=21) +
     labs(x="", y="") +
     ylim(ylim) +
     xlim(0, 2) +
@@ -126,10 +129,10 @@ plot_anova_2 <- function(mice, ylim=c(0,40), text.size=10) {
       axis.line = element_blank()
     )
   
-  g2 <- ggplot(mice.gr, aes(x=Country, y=M, group=Colour, colour=Colour)) +
+  g2 <- ggplot(mice.gr, aes(x=col, y=M, group=row, colour=row)) +
     theme_classic() +
-    geom_line(aes(group=Colour)) +
-    geom_point(aes(fill=Colour), size=2, shape=22) +
+    geom_line(aes(group=row)) +
+    geom_point(aes(fill=row), size=2, shape=22) +
     labs(x="", y="") +
     ylim(ylim) +
     geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
@@ -147,15 +150,15 @@ plot_anova_2 <- function(mice, ylim=c(0,40), text.size=10) {
       plot.margin = unit(c(-0.5,0,0,0),"cm")
     )
   
-  g3 <- ggplot(mice.gr, aes(x=Colour, y=M, group=Country, colour=Country)) +
+  g3 <- ggplot(mice.gr, aes(x=row, y=M, group=col, colour=col)) +
     theme_classic() +
-    geom_line(aes(group=Country)) +
-    geom_point(aes(colour=Country, fill=Country), size=2, shape=22) +
+    geom_line(aes(group=col)) +
+    geom_point(aes(colour=col, fill=col), size=2, shape=22) +
     labs(x="", y="") +
     ylim(ylim) +
     geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
-    scale_colour_manual(values=british.palette) +
-    scale_fill_manual(values=british.palette) +
+    scale_colour_manual(values=palette) +
+    scale_fill_manual(values=palette) +
     scale_x_discrete(position = "bottom") +
     theme(
       panel.border = element_rect(colour="black", linetype="solid", fill=NA),
@@ -376,5 +379,52 @@ plot_time_course_area <- function(tc) {
   t.test(d3[d3$Treatment == "Untreated", "Area"], d3[d3$Treatment == "Treated", "Area"])
   
   plot_grid(g1, g2, g3, ncol=3)
+}
+
+
+plot_sal <- function(sal, what) {
+  sal <- mutate(sal, x = !!sym(what))
+  g <- ggplot(sal, aes(x=x, y=salary)) +
+    theme_clean +
+    labs(x=what, y="salary")
+  if(is.factor(sal$x)) {
+    g <- g + geom_boxplot(outlier.shape = NA) + geom_beeswarm(size=0.6, colour="grey50")
+  } else {
+    g <- g + geom_point(size=0.6, colour="grey50")
+  }
+  g
+}
+
+
+plot_salaries <- function(sal) {
+  snames <- colnames(sal %>% select(-salary))
+  map(snames, ~plot_sal(sal, .x)) %>% 
+    plot_grid(plotlist = .)
+}
+
+
+plot_salaries_years <- function(sal) {
+  ggplot(sal, aes(x=yrs.since.phd, y=yrs.service)) +
+    theme_clean +
+    geom_point(size=0.6)
+}
+
+
+plot_female_proportion <- function(sal) {
+  fs <- sal %>% 
+    group_by(rank) %>% 
+    summarise(n_female = sum(sex == "Female"), n_male = sum(sex == "Male"), n = n()) %>% 
+    nest(data = c(n_female, n)) %>% 
+    mutate(
+      test = map(data, ~prop.test(.x$n_female, .x$n)),
+      tidied = map(test, broom::tidy)
+    ) %>% 
+    unnest(tidied)
   
+  ggplot(fs, aes(x=rank, y=estimate, ymin=conf.low, ymax=conf.high)) +
+    theme_clean +
+    geom_errorbar(width=0.3, colour="grey") +
+    geom_point() +
+    labs(x="Rank", y="Female propotion") +
+    scale_y_continuous(expand=expansion(mult = c(0, 0.05)), limits=c(0, NA))
 }

@@ -39,6 +39,7 @@ c(
   lecture_09(),
   lecture_10(),
   lecture_11(),
-  lecture_12()
+  lecture_12(),
+  lecture_13()
 )
 
