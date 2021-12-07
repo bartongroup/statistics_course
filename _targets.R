@@ -1,8 +1,5 @@
 library(targets)
 library(tarchetypes)
-#library(future)
-#library(future.callr)
-#plan(callr)
 source("R/setup.R")
 source("R/general.R")
 
@@ -10,12 +7,8 @@ packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforc
 tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
 
-#future::plan(multicore)
-
 # for interactive session only
 if(interactive()) sapply(packages, library, character.only=TRUE)
-
-TOP_DIR <- getwd()
 
 files_R <- Sys.glob("targets/*/*.R")
 sr_ <- sapply(files_R, source)

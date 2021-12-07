@@ -36,6 +36,8 @@ theme_d <- ggplot2::theme(
 
 
 gs <- function(pl, prefix, width, height, nm=NULL, dpi=300) {
+  if(!dir.exists(prefix)) dir.create(prefix, recursive=TRUE)
+  
   if(is.null(nm)) nm <- deparse(substitute(pl)) %>% str_remove("^fig_") %>% str_remove("^.+\\$")
   file <- file.path(prefix, glue("{nm}.png"))
   ggsave(file, pl, device="png", width=width, height=height, dpi=dpi)
