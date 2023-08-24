@@ -5,7 +5,7 @@ plot_mini_normal <- function(n = 10000) {
   d <- rnorm(n)
   tibble(
     d = d
-  ) %>% 
+  ) |> 
   ggplot(aes(x=d, y=..density..)) +
     theme_classic() +
     theme(
@@ -31,13 +31,13 @@ plot_counting_2d <- function(seed=124, n=100, nd=5) {
   delta <- brks[2] - brks[1]
 
   # count in boxes
-  dc <- d %>% 
+  dc <- d |> 
     mutate(
       px = cut(x, breaks = brks, labels=brks[1:nd]),
       py = cut(y, breaks = brks, labels=brks[1:nd])
-    ) %>% 
-    group_by(px, py) %>% 
-    tally() %>% 
+    ) |> 
+    group_by(px, py) |> 
+    tally() |> 
     mutate_at(vars(px, py), ~as.numeric(as.character(.x)))
   
   g1 <- ggplot() +
@@ -85,9 +85,9 @@ plot_counting_error <- function(seed=2002, n=10000, mu=11, lims=c(0, 23)) {
     err = sqrt(d)
   )
   
-  dist <- df %>% 
-    group_by(cnt) %>% 
-    tally() %>% 
+  dist <- df |> 
+    group_by(cnt) |> 
+    tally() |> 
     mutate(y = n / sum(n))
   
   # top panel
@@ -123,28 +123,45 @@ plot_counting_error <- function(seed=2002, n=10000, mu=11, lims=c(0, 23)) {
 murder_plot <- function(d) {
   ggplot(d) +
     theme_clean +
-    geom_errorbar(aes(x=City, ymin=Rate-Error, ymax=Rate+Error), width=0.2) +
-    geom_point(aes(x=City, y=Rate), size=2) +
-    labs(x=NULL, y="Murder rate per 100,000") +
-    scale_y_continuous(expand=c(0,0), limits=c(0, 6))
+    geom_errorbar(aes(x = City, ymin = Rate - Error, ymax = Rate + Error), width = 0.2) +
+    geom_point(aes(x = City, y = Rate), size = 2) +
+    labs(x = NULL, y = "Murder rate per 100,000") +
+    scale_y_continuous(expand = c(0,0), limits = c(0, 4.5))
 }
 
 
 murder_plots <- function() {
-  cities <- c("Dundee", "Glasgow", "Aberdeen", "Edinburgh")
+  cities <- c("Dundee", "West Lothian", "Glasgow", "Aberdeen", "Edinburgh")
   dat <- tibble(
     City = cities,
-    Murders = c(6, 19, 2, 2),
-    Rate = c(4.1, 3.2, 0.88, 0.41)
-  ) %>% 
+    Murders = c(4, 5, 10, 1, 3),
+    Rate = c(2.69, 2.72, 1.57, 0.44, 0.57),
+    Population = c(148820, 183820, 635640, 229060, 527620)
+  ) |> 
     mutate(
       Error = Rate * sqrt(Murders) / Murders,
       City = factor(City, levels=cities)
-    )
+    ) |> 
+    arrange(-Rate) |> 
+    mutate(City = fct_reorder(City, -Rate))
+  dat <- dat |> 
+    mutate(
+      dundee_population = dat[2, ]$Population,
+      dundee_murders = dat[2, ]$Murders
+    ) |> 
+    rowwise() |> 
+    nest(data = c(Murders, Population, dundee_murders, dundee_population)) |> 
+    mutate(matrix = map(data, ~matrix(unlist(.x), nrow = 2))) |> 
+    mutate(fisher = map(matrix, ~fisher.test(.x))) |> 
+    mutate(stats = map(fisher, ~broom::glance(.x))) |> 
+    select(-c(data, matrix, fisher)) |> 
+    unnest(stats) |> 
+    select(-c(method, alternative))
 
   list(
-    murder_1 = murder_plot(dat[1:2, ]),
-    murder_2 = murder_plot(dat)
+    murder_1 = murder_plot(dat[c(2,3), ]),
+    murder_2 = murder_plot(dat),
+    data = dat
   )
 }
 
@@ -180,16 +197,16 @@ plot_median <- function(seed=112, n=10) {
   d <- tibble(
     type = c(rep("Symmetric", n), rep("Outliers", n)),
     value = c(x1, x2)
-  ) %>% 
+  ) |> 
     mutate(
       type = fct_relevel(type, "Symmetric")
     )
 
-  dm <- d %>% group_by(type) %>%
+  dm <- d |> group_by(type) |>
     summarise(
       mean=mean(value),
       median=median(value)
-    ) %>%
+    ) |>
     mutate(i=as.integer(type))
   
   shift <- 0.3
@@ -233,17 +250,17 @@ generate_sampling_distributions <- function(seed=1, ns=c(5, 30), n_pop=100000, n
       samples = samples,
       sample_means = sample_means
     )
-  }) %>% 
-    set_names(ns) %>% 
+  }) |> 
+    set_names(ns) |> 
     c(list(population = pop))
 }
 
 
 
-plot_pop_sammean <- function(sm, n=5) {
-  g1 <- plot_one_dist(sm$population, "Mouse weight (g)", "Population", c(0, 40), with.outline = TRUE)
-  g2 <- plot_one_dist(sm[[as.character(n)]]$sample_means, "Sample mean weight (g)", "Sample means", c(0, 40), with.outline = TRUE)
-  plot_grid(g1, g2, ncol=2, scale=0.9)
+plot_pop_sammean <- function(sm, n = 5) {
+  g1 <- plot_one_dist(sm$population, "Mouse weight (g)", NULL, c(0, 40), with.outline = TRUE)
+  g2 <- plot_one_dist(sm[[as.character(n)]]$sample_means, "Sample mean weight (g)", NULL, c(0, 40), with.outline = TRUE)
+  plot_grid(g1, g2, ncol = 1, scale = 0.9)
 }
 
 
@@ -258,17 +275,17 @@ plot_sampling_mean <- function(sam, lims=c(0, 40), nsub=8, seed=123, cex=2, size
   
   n <- nrow(sam)
   ns <- ncol(sam)
-  m <- sam[sample(1:n, nsub), ] %>% 
-    as_tibble(.name_repair = "unique") %>% 
-    set_names(as.character(1:ns)) %>% 
-    add_column(i = 1:nsub) %>% 
+  m <- sam[sample(1:n, nsub), ] |> 
+    as_tibble(.name_repair = "unique") |> 
+    set_names(as.character(1:ns)) |> 
+    add_column(i = 1:nsub) |> 
     pivot_longer(-i, names_to = "n")
 
-  mm <- m %>% 
-    group_by(i) %>% 
+  mm <- m |> 
+    group_by(i) |> 
     summarise(M = mean(value), S = sd(value), SE = S / sqrt(n()))
     
-  s2 <- m %>% filter(i == 2) %>% pull(value) %>% sort()
+  s2 <- m |> filter(i == 2) |> pull(value) |> sort()
   s2e <- sd(s2) /sqrt(length(s2))
   print(round(s2, 1))
   print(signif(s2e,2))

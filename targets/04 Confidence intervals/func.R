@@ -48,7 +48,7 @@ plot_poisson_ci_shift <- function(n = 5) {
 
 plot_count_ci <- function(n, breaks=NULL, no.lab.y=FALSE) {
   if(is.null(breaks)) breaks <- waiver()
-  d <- map_dfr(n, count_ci) %>% 
+  d <- map_dfr(n, count_ci) |> 
     mutate(
       lo_se = n - sqrt(n),
       up_se = n + sqrt(n),
@@ -118,8 +118,8 @@ plot_cor_sample <- function(dat_cor, n=30, lim=2.5, seed=NULL) {
 
 plot_9_cor <- function(dat_cor, seed = 2237) {
   set.seed(seed)
-  map(1:9, ~plot_cor_sample(dat_cor)) %>% 
-    plot_grid(plotlist=., ncol=3)  
+  gs <- map(1:9, ~plot_cor_sample(dat_cor))
+  plot_grid(plotlist = gs, ncol=3)  
 }
 
 plot_cor_sampling <- function(sam_cor) {
@@ -188,9 +188,9 @@ sampling_dist_proportion <- function(p = 0.13, ns = c(998, 50, 10), nsim=100000)
   map_dfr(ns, function(k) {
     tibble(
       s = rbinom(nsim, k, p)
-    ) %>%
-      group_by(s) %>% 
-      tally() %>% 
+    ) |>
+      group_by(s) |> 
+      tally() |> 
       mutate(
         prop = s / k,
         prob = n / sum(n),
@@ -200,8 +200,8 @@ sampling_dist_proportion <- function(p = 0.13, ns = c(998, 50, 10), nsim=100000)
 }
 
 one_prop_plot <- function(d, nn, point.size=1, xmax=0.6, xlab=NULL) {
-  d %>% 
-    filter(n == nn) %>% 
+  d |> 
+    filter(n == nn) |> 
     ggplot() +
     theme_clean +
     geom_segment(aes(x=prop, xend=prop, y=0, yend=prob), colour="grey70") +
@@ -257,16 +257,16 @@ plot_mice_survival <- function() {
       n = N,
       s = N * P
     )
-  }) %>% 
+  }) |> 
     # need to differentiate rows for nest
-    mutate(id = row_number()) %>% 
-    nest(data = c(s, n)) %>%
+    mutate(id = row_number()) |> 
+    nest(data = c(s, n)) |>
     mutate(
       tst = map(data, ~prop.test(.x$s, .x$n)),
       tidied = map(tst, broom::tidy),
-    ) %>%
-    unnest(c(data, tidied)) %>% 
-    select(day, prop, s, n, conf.low, conf.high) %>% 
+    ) |>
+    unnest(c(data, tidied)) |> 
+    select(day, prop, s, n, conf.low, conf.high) |> 
     pivot_wider(id_cols = c(day, prop), names_from = n, values_from = c(conf.low, conf.high))
   
 

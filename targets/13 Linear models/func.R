@@ -16,8 +16,8 @@ generate_m5 <- function(seed=1) {
   n1 <- 2
   n2 <- 3
   tibble(
-    diet = c(rep('norm', n1), rep('hifat', n2)) %>% as_factor(),
-    mass = c(rnorm(n1, 20, 5), rnorm(n2, 30, 5)) %>% round(1)
+    diet = c(rep('norm', n1), rep('hifat', n2)) |> as_factor(),
+    mass = c(rnorm(n1, 20, 5), rnorm(n2, 30, 5)) |> round(1)
   )
 }
 
@@ -25,12 +25,12 @@ generate_m12 <- function(seed=1) {
   set.seed(seed)
   n1 <- 6
   n2 <- 6
-  row <- c(rnorm(n1, 20, 5), rnorm(n2, 30, 5)) %>% round(1)
+  row <- c(rnorm(n1, 20, 5), rnorm(n2, 30, 5)) |> round(1)
   samples <- c(rep('norm', n1), rep('hifat', n2))
   sex <- c('f', 'f', 'f', 'm', 'm', 'm', 'f', 'f', 'f', 'm', 'm', 'm')
-  tibble(mass=row, diet=factor(samples), sex=factor(sex)) %>% 
-    mutate(diet = fct_relevel(diet, "norm"), sex = fct_relevel(sex, "f")) %>% 
-    unite(group, c(diet, sex), remove=FALSE) %>% 
+  tibble(mass=row, diet=factor(samples), sex=factor(sex)) |> 
+    mutate(diet = fct_relevel(diet, "norm"), sex = fct_relevel(sex, "f")) |> 
+    unite(group, c(diet, sex), remove=FALSE) |> 
     mutate(group = factor(group, levels=c("norm_f", "hifat_f", "norm_m", "hifat_m")))
   
   
@@ -73,15 +73,15 @@ plot_fit_coefficients <- function(d, cf, group_var = "group", value_var = "value
     )
   }
   
-  dat <- d %>% 
-    mutate(group = get(group_var), value = get(value_var)) %>% 
+  dat <- d |> 
+    mutate(group = get(group_var), value = get(value_var)) |> 
     mutate(x = as.numeric(as.factor(group)))
   
-  gdat <- dat %>%
-    group_by(group) %>%
-    summarise(M = mean(value)) %>% 
-    mutate(cf.name = cf.names) %>% 
-    bind_cols(arr) %>% 
+  gdat <- dat |>
+    group_by(group) |>
+    summarise(M = mean(value)) |> 
+    mutate(cf.name = cf.names) |> 
+    bind_cols(arr) |> 
     mutate(text.y = (lo + up) / 2 + nudge)
 
   dw <- 0.1
@@ -106,8 +106,8 @@ plot_fit_coefficients <- function(d, cf, group_var = "group", value_var = "value
 }
 
 plot_coefficients <- function(fit, nudge=0.7) {
-  fit %>% 
-    broom::tidy() %>% 
+  fit |> 
+    broom::tidy() |> 
     ggplot(aes(x=term, y=estimate, ymin=estimate-std.error, ymax=estimate+std.error)) +
     theme_clean +
     geom_errorbar(width=0.3) +
@@ -152,8 +152,8 @@ plot_r2 <- function(d) {
   cf <- coef(mod)
   R2 <- summary(mod)$r.squared
   
-  d %>%
-    mutate(pred = predict(mod, d)) %>% 
+  d |>
+    mutate(pred = predict(mod, d)) |> 
     ggplot(aes(x=x, y=y)) +
     theme_clean +
     geom_segment(aes(xend=x, yend=pred), colour="black") +

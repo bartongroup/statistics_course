@@ -55,7 +55,7 @@ plot_t_animation <- function() {
       dof = dof
     )
   })
-  tf1 <- tf %>% rename(dummy = dof)
+  tf1 <- tf |> rename(dummy = dof)
   ef <- tibble(
     x = x,
     y = dnorm(x)
@@ -63,16 +63,21 @@ plot_t_animation <- function() {
   
   g <- ggplot(tf, aes(x=x, y=y)) +
     theme_clean +
-    geom_line(data=tf1, aes(x=x, y=y, group=dummy), colour="grey80", size=0.5) +
-    geom_line(colour="red", size=2) +
-    geom_line(data=ef, aes(x, y), colour="black", size=1) +
-    theme(axis.text = element_text(size=24), text = element_text(size=24), plot.title = element_text(size=26)) +
+    geom_line(data=tf1, aes(x=x, y=y, group=dummy), colour="grey80", linewidth=0.5) +
+    geom_line(colour="red", linewidth=2) +
+    geom_line(data=ef, aes(x, y), colour="black", linewidth=1) +
+    theme(
+      axis.text = element_text(size=24),
+      axis.ticks.length = unit(3, "mm"),
+      text = element_text(size=24),
+      plot.title = element_text(size=26)
+    ) +
     transition_manual(dof) +
     scale_y_continuous(expand=c(0,0), limits=c(0, max(tf$y) * 1.03)) +
     scale_x_continuous(breaks=seq(-4,4,2), limits=c(-5,5), expand=c(0,0)) +
     labs(title="d.o.f. = {current_frame}", x="t", y="f(t)")
   
-  animate(g, fps = 20, renderer = gifski_renderer(loop = FALSE), width=600, height=500)
+  animate(g, fps = 20, renderer = gifski_renderer(loop = TRUE), width=600, height=500)
 }
 
 
@@ -251,9 +256,9 @@ plot_t2_null <- function(md) {
 
 
 mice_properties <- function(mice) {
-  English <- mice %>% filter(Country=="English") %>% pull(Mass)
-  Scottish <- mice %>% filter(Country=="Scottish") %>% pull(Mass)
-  mice %>% group_by(Country) %>% summarise(M=mean(Mass), SD=sd(Mass), VAR=var(Mass))
+  English <- mice |> filter(Country=="English") |> pull(Mass)
+  Scottish <- mice |> filter(Country=="Scottish") |> pull(Mass)
+  mice |> group_by(Country) |> summarise(M=mean(Mass), SD=sd(Mass), VAR=var(Mass))
   make_DMT(
     matrix(English, nrow=1), 
     matrix(Scottish, nrow=1)
@@ -406,13 +411,13 @@ make_paired_t_data <- function() {
 
 
 plot_paired_test <- function(pd) {
-  x <- pd %>% 
+  x <- pd |> 
     mutate(sign = as_factor(sign(Before - After)))
   
-  m <- pd %>% 
-    mutate(id = row_number()) %>% 
-    pivot_longer(-id) %>% 
-    mutate(name = name %>% as_factor() %>% fct_relevel("Before"))
+  m <- pd |> 
+    mutate(id = row_number()) |> 
+    pivot_longer(-id) |> 
+    mutate(name = name |> as_factor() |> fct_relevel("Before"))
   
   
   g <- ggplot(m, aes(name, value)) +
@@ -448,10 +453,10 @@ plot_f_tests <- function(d, N1 = 12, N2 = 9) {
 
 
 plot_f_dist <- function(mice) {
-  ms <- mice %>% 
-    group_by(Country) %>% 
+  ms <- mice |> 
+    group_by(Country) |> 
     summarise(S = sd(Mass), n = n())
-  m <- map(1:nrow(ms), ~slice(ms, .x)) %>% set_names(ms$Country)
+  m <- map(1:nrow(ms), ~slice(ms, .x)) |> set_names(ms$Country)
   
   F_obs <- m$English$S^2 / m$Scottish$S^2
   df1 = m$English$n - 1

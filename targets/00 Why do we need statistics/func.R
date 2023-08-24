@@ -1,23 +1,23 @@
 plot_gene_cnt <- function(cnt, gene, sel=NULL, p.alpha=1) {
-  m <- cnt %>% 
-    filter(gene_id == gene) %>% 
-    pivot_longer(-gene_id, names_to="sample") %>% 
-    separate(sample, c("condition", "replicate"), sep="_", remove=FALSE) %>% 
+  m <- cnt |> 
+    filter(gene_id == gene) |> 
+    pivot_longer(-gene_id, names_to="sample") |> 
+    separate(sample, c("condition", "replicate"), sep="_", remove=FALSE) |> 
     mutate(condition = fct_relevel(condition, "WT"))
   lims <- c(min(m$value), max(m$value))
   
-  if(!is.null(sel)) m <- m %>% filter(sample %in% sel)
+  if(!is.null(sel)) m <- m |> filter(sample %in% sel)
   #if(is.null(sel)) test <- t.test(value~condition, data=m)
-
+  
   g <- ggplot() +
     theme_bw() +
     scale_fill_manual(values=okabe_ito_palette, guide="none") +
-    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha, groupOnX=TRUE) +
+    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
     labs(x=NULL, y="Read count") +
     scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
     scale_y_continuous(limits = lims)
   if(is.null(sel)) {
-    mm <- m %>% group_by(condition) %>% summarise(M=mean(value), SD=sd(value), n=n()) %>% mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
+    mm <- m |> group_by(condition) |> summarise(M=mean(value), SD=sd(value), n=n()) |> mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
     mm$i <- c(1.3, 1.7)
     g <- g +
       geom_errorbar(data=mm, aes(x=i, ymin=M-CI, ymax=M+CI), width=0.15) +
@@ -96,18 +96,18 @@ plot_body_temperature <- function(body) {
 
 
 read_tumour_data <- function(file) {
-  ptpn <- read_tsv(file, name_repair = make.names) %>%
-    set_names(c("day", paste0("KO_", 1:12), paste0("WT_", 1:12))) %>% 
-    mutate(day = as.numeric(str_remove(day, "day"))) %>%
-    pivot_longer(-day, names_to="sample", values_to="volume") %>%
-    separate("sample", c("condition", "replicate"), "_", remove=FALSE) %>%
-    filter(!is.na(volume) & volume > 0) %>%
+  ptpn <- read_tsv(file, name_repair = make.names) |>
+    set_names(c("day", paste0("KO_", 1:12), paste0("WT_", 1:12))) |> 
+    mutate(day = as.numeric(str_remove(day, "day"))) |>
+    pivot_longer(-day, names_to="sample", values_to="volume") |>
+    separate("sample", c("condition", "replicate"), "_", remove=FALSE) |>
+    filter(!is.na(volume) & volume > 0) |>
     mutate(lvolume = log10(volume), lday=log10(day))
 }
 
 plot_tumour_lines <- function(ptpn) {
-  m <- ptpn %>%
-    group_by(condition, day) %>%
+  m <- ptpn |>
+    group_by(condition, day) |>
     summarise(M = mean(volume), SE = sd(volume) / sqrt(n()))
  
   y.lims <- c(0.3, 1300)
@@ -161,25 +161,25 @@ plot_tumour_lines <- function(ptpn) {
 read_devspine <- function(file) {
   conditions <- c("E12.5", "E16.5", "Adult")
   replicates <- 1:3
-  metadata <- expand.grid(replicate=replicates, condition=conditions) %>%
-    unite(sample, c(condition, replicate), sep="-", remove=FALSE) %>%
-    mutate(column = tolower(sample)) %>% 
-    mutate(column = gsub("\\.", "", column)) %>%
+  metadata <- expand.grid(replicate=replicates, condition=conditions) |>
+    unite(sample, c(condition, replicate), sep="-", remove=FALSE) |>
+    mutate(column = tolower(sample)) |> 
+    mutate(column = gsub("\\.", "", column)) |>
     mutate(column = gsub("-", "_", column))
   
-  ds <- read_tsv(file) %>%
-    mutate(GeneID = toupper(GeneID)) %>% 
-    filter(rowSums(.[2:10]) > 0) %>%
-    filter(str_detect(GeneID, pattern="ENSMUSG")) %>%
-    column_to_rownames("GeneID") %>%
+  ds <- read_tsv(file) |>
+    mutate(GeneID = toupper(GeneID)) |> 
+    filter(rowSums(across(where(is.numeric))) > 0) |>
+    filter(str_detect(GeneID, pattern="ENSMUSG")) |>
+    column_to_rownames("GeneID") |>
     set_names(metadata$sample)
   
-  norms <- as.matrix(ds) %>%
-    DGEList(group=metadata$condition) %>%
-    calcNormFactors() %>%
+  norms <- as.matrix(ds) |>
+    DGEList(group=metadata$condition) |>
+    calcNormFactors() |>
     pluck("samples", "norm.factors")
   
-  dsn <- t(t(ds) * norms) %>% as.data.frame()
+  dsn <- t(t(ds) * norms) |> as.data.frame()
   
   
   ds2 <- ds[, c(1:3, 7:9)]
@@ -192,13 +192,13 @@ read_devspine <- function(file) {
 plot_clustering_devspine <- function(cnt) {
   cnt[cnt==0] <- NA
   corr.mat <- cor(log(cnt), use = "complete.obs") 
-  dend <- as.dist(1 - corr.mat) %>% hclust %>% as.dendrogram
-  cond <- gsub("-\\d", "", colnames(cnt), perl=TRUE) %>%
-    factor(levels=c("E12.5", "E16.5", "Adult")) %>%
-    as.numeric
+  dend <- as.dist(1 - corr.mat) |> hclust() |> as.dendrogram()
+  cond <- gsub("-\\d", "", colnames(cnt), perl=TRUE) |>
+    factor(levels=c("E12.5", "E16.5", "Adult")) |>
+    as.numeric()
   cond <- cond[order.dendrogram(dend)]
   labels_colors(dend) <- okabe_ito_palette[cond]
-  dend <- dend %>% set("labels_cex", 0.6) %>% set("branches_lwd", 0.3)
+  dend <- dend |> set("labels_cex", 0.6) |> set("branches_lwd", 0.3)
   gg <- as.ggdend(dend)
   ggplot(gg, horiz=FALSE, offset_labels=-0.01) + ylim(-0.1, max(get_branches_heights(dend)))
 }
@@ -208,16 +208,16 @@ plot_distance_matrix <- function(cnt, metadata, distance=c("correlation"), text.
   distance <- match.arg(distance)
   
   cnt[cnt==0] <- NA
-  d <- log(cnt) %>% 
-    cor(use = "complete.obs") %>% 
-    as_tibble(rownames = "sample1") %>% 
-    pivot_longer(-sample1, names_to="sample2") %>% 
+  d <- log(cnt) |> 
+    cor(use = "complete.obs") |> 
+    as_tibble(rownames = "sample1") |> 
+    pivot_longer(-sample1, names_to="sample2") |> 
     mutate_at(vars(sample1, sample2), ~factor(.x, levels = metadata$sample))
   clr <- okabe_ito_palette[as_factor(metadata$condition)]
   ggplot(d, aes(x=sample1, y=sample2)) +
     theme_bw() +
     geom_tile(aes_(fill=~value)) +
-    viridis::scale_fill_viridis(option="cividis") +
+    scale_fill_viridis_c(option="cividis") +
     theme(
       axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5, size=text.size, colour=clr),
       axis.text.y = element_text(size=text.size, colour=clr)
@@ -233,17 +233,17 @@ get_mouse_genes <- function(version) {
 
 
 plot_genes_cnt <- function(cnt, gene_ids, genes, cex=3, conditions=c("E12.5", "E16.5", "Adult")) {
-  d <- cnt[gene_ids, ] %>%
-    as_tibble(rownames = "gene_id") %>% 
-    pivot_longer(-gene_id, names_to="sample", values_to="count") %>% 
-    mutate(condition = str_remove(sample, "-\\d") %>% factor(levels=conditions)) %>% 
+  d <- cnt[gene_ids, ] |>
+    as_tibble(rownames = "gene_id") |> 
+    pivot_longer(-gene_id, names_to="sample", values_to="count") |> 
+    mutate(condition = str_remove(sample, "-\\d") |> factor(levels=conditions)) |> 
     left_join(genes, by="gene_id")
   ggplot(d, aes(x=condition, y=count, fill=condition)) +
     theme_bw() +
     theme(legend.position = "none") +
     facet_wrap(~gene_name) +
     geom_beeswarm(shape=21, cex=cex, size=1.8) +
-    scale_y_continuous() +
+    #scale_y_continuous() +
     scale_fill_manual(values=okabe_ito_palette) +
     labs(x=NULL, y="Count")
 }
@@ -259,14 +259,14 @@ run_devspine_de <- function(devspine) {
     levels = design
   )
   
-  de.edger <- as.matrix(devspine$ds2) %>%
-    DGEList(group=cond2) %>%
-    calcNormFactors() %>%
-    estimateDisp(design=design) %>%
-    glmQLFit(design=design) %>%
-    glmQLFTest(contrast=gt.contrasts[, "Adult-E12.5"]) %>%
-    topTags(n=1e6, adjust.method="BH", sort.by="none") %>%
-    pluck("table") %>% 
+  de.edger <- as.matrix(devspine$ds2) |>
+    DGEList(group=cond2) |>
+    calcNormFactors() |>
+    estimateDisp(design=design) |>
+    glmQLFit(design=design) |>
+    glmQLFTest(contrast=gt.contrasts[, "Adult-E12.5"]) |>
+    topTags(n=1e6, adjust.method="BH", sort.by="none") |>
+    pluck("table") |> 
     as_tibble(rownames = "gene_id")
   
   test <- function(v) {
@@ -279,33 +279,33 @@ run_devspine_de <- function(devspine) {
     }
   }
   
-  de.t <- devspine$dsn2 %>%
-    na_if(0) %>%
-    log10() %>%
-    apply(., 1, test)
+  de.t <- devspine$dsn2 |>
+    mutate(across(everything(), ~na_if(.x, 0))) |> 
+    log10() |>
+    apply(1, test)
   
-  tibble(gene_id = names(de.t), P = de.t) %>% 
+  tibble(gene_id = names(de.t), P = de.t) |> 
     right_join(de.edger, by="gene_id")
 }
 
 # select gene examples that are signficant only in t-test and only in edger
 t_edger_selection <- function(de, genes) {
-  only.t <- de %>%
-    filter(P < 0.05 & PValue < 0.05 & FDR > 0.1 & logCPM > 2) %>% 
-    left_join(genes, by="gene_id") %>% 
+  only.t <- de |>
+    filter(P < 0.05 & PValue < 0.05 & FDR > 0.1 & logCPM > 2) |> 
+    left_join(genes, by="gene_id") |> 
     mutate(selection = "only_t")
-  only.edger <- de %>% filter(P > 0.1 & FDR < 0.01 & logCPM > 2) %>% 
-    left_join(genes, by="gene_id") %>% 
+  only.edger <- de |> filter(P > 0.1 & FDR < 0.01 & logCPM > 2) |> 
+    left_join(genes, by="gene_id") |> 
     mutate(selection = "only_edger")
   
-  bind_rows(only.t, only.edger) %>% 
+  bind_rows(only.t, only.edger) |> 
     select(selection, gene_id, gene_name, logFC, P, PValue, FDR)
 }
 
 
 read_drugs <- function() {
   list(
-    drugs = readRDS("data/drugpred.rds") %>% 
+    drugs = readRDS("data/drugpred.rds") |> 
       rename(logVDss = response),
     coef_names =  readRDS("data/coef_names.rds")
   )
@@ -316,14 +316,14 @@ make_model <- function(dat) {
 }
 
 show_model <- function(mod, coef_names, alpha=0.05) {
-  summary(mod)$coefficients %>%
-    as.data.frame %>%
-    rownames_to_column(var="coefficient") %>%
-    as_tibble %>% 
-    mutate(coefficient = gsub("`", "", coefficient)) %>%
-    filter(`Pr(>|t|)` < alpha) %>%
-    arrange(`Pr(>|t|)`) %>% 
-    left_join(coef_names, by="coefficient") %>% 
-    mutate(value = ifelse(is.na(value), " ", value)) %>% 
+  summary(mod)$coefficients |>
+    as.data.frame() |>
+    rownames_to_column(var="coefficient") |>
+    as_tibble() |> 
+    mutate(coefficient = gsub("`", "", coefficient)) |>
+    filter(`Pr(>|t|)` < alpha) |>
+    arrange(`Pr(>|t|)`) |> 
+    left_join(coef_names, by="coefficient") |> 
+    mutate(value = ifelse(is.na(value), " ", value)) |> 
     select(coefficient, variable, value, estimate = Estimate, t = `t value`, `p-value` = `Pr(>|t|)`)
 }

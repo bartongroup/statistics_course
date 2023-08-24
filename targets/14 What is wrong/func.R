@@ -7,7 +7,7 @@ generate_two_dist <- function(seed=111, n1=97000, n2=3000, M1=20, M2=30, S=5) {
 }
 
 p_sampling <- function(d, null, n=5, mu=20) {
-  x <- d %>% filter(hyp == null) %>% pull(value)
+  x <- d |> filter(hyp == null) |> pull(value)
   if(length(x) == 0) return(numeric(0))
   nsim <- length(x)
   map_dbl(1:nsim, function(i) {
@@ -39,17 +39,17 @@ generate_effect_size <- function(seed=3736, nsim=100000, M1=20, M2=25, n=3, S=5)
 
 
 read_strains <- function(file) {
-  read_tsv("data/all_update.txt", col_names = FALSE) %>% 
-    select(11, 30) %>% 
-    set_names("distance", "strain") %>% 
-    filter(strain %in% c("70.6kb", "71kb")) %>% 
+  read_tsv("data/all_update.txt", col_names = FALSE) |> 
+    select(11, 30) |> 
+    set_names("distance", "strain") |> 
+    filter(strain %in% c("70.6kb", "71kb")) |> 
     mutate(distance = distance / 1000)
 }
 
 
 plot_mix_dist <- function(d, breaks, alpha=0.8) {
-  d0 <- d %>% filter(hyp)
-  d1 <- d %>% filter(!hyp)
+  d0 <- d |> filter(hyp)
+  d1 <- d |> filter(!hyp)
   ggplot() +
     theme_dist +
     labs(x="Body mass (g)", y=NULL) +
@@ -107,8 +107,8 @@ plot_effect_sizes <- function(eff) {
 
 
 plot_strain_dist <- function(d) {
-  m <- d %>%
-    group_by(strain) %>%
+  m <- d |>
+    group_by(strain) |>
     summarise(M = mean(distance), SE = sd(distance) / sqrt(n()))
   
   t.test(distance ~ strain, data=d)

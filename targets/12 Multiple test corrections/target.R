@@ -2,7 +2,7 @@
 lecture_12 <- function() {
   
   init <- list(
-    tar_target(pref12, "figures/12_multiple_test_corrections")
+    tar_target(path12, "figures/12_multiple_test_corrections")
   )
 
   read_data <- list(
@@ -23,38 +23,38 @@ lecture_12 <- function() {
   make_figures <- list(
     # FWER
     tar_target(figs_fwer, plot_fwer()),
-    tar_target(s_fw_1, gs(figs_fwer$fwer, pref12, 3.5, 3)),
-    tar_target(s_fw_2, gs(figs_fwer$fwer_bonferroni, pref12, 3.5, 3)),
+    tar_target(s_fw_1, gs(figs_fwer$fwer, path12, 3.5, 3)),
+    tar_target(s_fw_2, gs(figs_fwer$fwer_bonferroni, path12, 3.5, 3)),
     
     # test data
-    tar_target(s_td2, plot_two_dist(two_data) %>% gs(pref12, 3.5, 3, "test_data_dist")),
-    tar_target(s_tp2, plot_two_dist_p(two_data_p) %>% gs(pref12, 3.5, 3, "test_data_dist_pvalue")),
+    tar_target(s_td2, plot_two_dist(two_data) |> gs(path12, 3.5, 3, "test_data_dist")),
+    tar_target(s_tp2, plot_two_dist_p(two_data_p) |> gs(path12, 3.5, 3, "test_data_dist_pvalue")),
     
     # HM, BH
     tar_target(figs_small_dat, plot_small_data(small_p_data)),
-    tar_target(s_shb, gs(figs_small_dat$holm_bonferroni, pref12, 3, 2.5)),
-    tar_target(s_sbh, gs(figs_small_dat$benjamini_hochberg, pref12, 3, 2.5)),
+    tar_target(s_shb, gs(figs_small_dat$holm_bonferroni, path12, 3, 2.5)),
+    tar_target(s_sbh, gs(figs_small_dat$benjamini_hochberg, path12, 3, 2.5)),
     
     tar_target(figs_large_dat, plot_large_data(large_p_data)),
-    tar_target(s_lb_1, gs(figs_large_dat$large_HB, pref12, 4, 3.5)),
-    tar_target(s_lb_2, gs(figs_large_dat$large_BH, pref12, 4, 3.5)),
-    tar_target(s_lb_3, gs(figs_large_dat$large_adjusted, pref12, 4, 3.5)),
+    tar_target(s_lb_1, gs(figs_large_dat$large_HB, path12, 4, 3.5)),
+    tar_target(s_lb_2, gs(figs_large_dat$large_BH, path12, 4, 3.5)),
+    tar_target(s_lb_3, gs(figs_large_dat$large_adjusted, path12, 4, 3.5)),
     
     # FDR
-    tar_target(s_fdr, plot_fdr_distribution(fdr_dist) %>% gs(pref12, 4, 4.2, "fdr_dist")),
+    tar_target(s_fdr, plot_fdr_distribution(fdr_dist) |> gs(path12, 4, 4.2, "fdr_dist")),
     
     # p distributions
     tar_target(figs_pdist, plot_p_distributions()),
-    tar_target(s_pd_1, gs(figs_pdist$p_dist_null, pref12, 3.5, 2.5)),
-    tar_target(s_pd_2, gs(figs_pdist$p_dist_alt, pref12, 3.5, 2.5)),
-    tar_target(s_pd_3, gs(figs_pdist$p_dist_bad, pref12, 3.5, 2.5)),
-    tar_target(s_pd_4, gs(figs_pdist$p_dist_alt_one, pref12, 3.5, 2.5)),
+    tar_target(s_pd_1, gs(figs_pdist$p_dist_null, path12, 3.5, 2.5)),
+    tar_target(s_pd_2, gs(figs_pdist$p_dist_alt, path12, 3.5, 2.5)),
+    tar_target(s_pd_3, gs(figs_pdist$p_dist_bad, path12, 3.5, 2.5)),
+    tar_target(s_pd_4, gs(figs_pdist$p_dist_alt_one, path12, 3.5, 2.5)),
     
     # Storey method
     tar_target(figs_storey, plot_storey(two_data_p_fdr)),
-    tar_target(s_fs_1, gs(figs_storey$pq_bh, pref12, 3.5, 3)),
-    tar_target(s_fs_2, gs(figs_storey$pq, pref12, 4, 3.5)),
-    tar_target(s_fs_3, gs(figs_storey$pq_small, pref12, 2, 2))
+    tar_target(s_fs_1, gs(figs_storey$pq_bh, path12, 3.5, 3)),
+    tar_target(s_fs_2, gs(figs_storey$pq, path12, 4, 3.5)),
+    tar_target(s_fs_3, gs(figs_storey$pq_small, path12, 2, 2))
   )
   
   make_tables <- list(

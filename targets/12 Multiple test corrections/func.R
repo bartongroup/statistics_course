@@ -36,7 +36,7 @@ generate_two_data <- function(seed=110, N1=970, M1=20, N2=30, M2=40, n=5, S=5) {
   tibble(
     samp = rep(seq(1, N1 + N2), each=n),
     value = c(h0, h1),
-    hypothesis = c(rep(0, length(h0)), rep(1, length(h1))) %>% factor(levels = c(1, 0))
+    hypothesis = c(rep(0, length(h0)), rep(1, length(h1))) |> factor(levels = c(1, 0))
   )
 }
 
@@ -45,7 +45,7 @@ two_data_tests <- function(td, mu=20, n_tests=1000, seed=321) {
   set.seed(seed)
   N <- max(td$samp)
   map_dfr(1:n_tests, function(i) {
-    sel <- td %>% filter(samp == sample(1:N, 1))
+    sel <- td |> filter(samp == sample(1:N, 1))
     x <- sel$value
     hyp <- sel$hypothesis[1]
     tt <- t.test(x, mu=mu)
@@ -54,8 +54,8 @@ two_data_tests <- function(td, mu=20, n_tests=1000, seed=321) {
 }
 
 read_two_p <- function(file) {
-  read_tsv(file) %>%
-    mutate(hypothesis = factor(hypothesis, levels=c(1,0))) %>% 
+  read_tsv(file) |>
+    mutate(hypothesis = factor(hypothesis, levels=c(1,0))) |> 
     mutate(padj = p.adjust(p_value, method = "BH"))
 }
 
@@ -87,7 +87,7 @@ plot_two_dist_p <- function(pd) {
 
 
 p_table <- function(dat, alpha=0.05, what = "p_value") {
-  dat <- dat %>% 
+  dat <- dat |> 
     mutate(p = get(what))
   FP <- sum(dat$hypothesis==0 & dat$p <= alpha)
   TP <- sum(dat$hypothesis==1 & dat$p <= alpha)
@@ -115,15 +115,15 @@ make_small_p_data <- function() {
 
 make_large_p_data <- function(pd, alpha=0.05) {
   m <- nrow(pd)
-  pd %>% 
-    arrange(p_value) %>% 
+  pd |> 
+    arrange(p_value) |> 
     mutate(
       k = seq_along(p_value),
       alpha = alpha,
       alpha_b = alpha / m,
       alpha_hb = alpha / (m - k + 1),
       alpha_bh = k * alpha / m
-    ) %>% 
+    ) |> 
     mutate(padj = p.adjust(p_value, "BH")
 )
 }
@@ -162,8 +162,8 @@ plot_small_data <- function(sp, alpha=0.05) {
 
 plot_large_data <- function(lp, alpha=0.05) {
   m <- nrow(lp)
-  hb_limit <- lp %>% filter(p_value < alpha_hb) %>% pull(k) %>% max()
-  bh_limit <-lp %>% filter(p_value < alpha_bh) %>% pull(k) %>% max()
+  hb_limit <- lp |> filter(p_value < alpha_hb) |> pull(k) |> max()
+  bh_limit <-lp |> filter(p_value < alpha_bh) |> pull(k) |> max()
   
   g <- ggplot(lp) +
     theme_classic() +
@@ -220,7 +220,7 @@ generate_test_data <- function(m0, m1, n=5, M1=20, M2=40, S=5) {
   H1 <- matrix(rnorm(n * m1, M2, S), ncol=n)
   p <- test_matrix_fast(rbind(H0, H1), M1)
   tibble(
-    hypothesis = c(rep(0, m0), rep(1, m1)) %>% factor(levels = c(1, 0)),
+    hypothesis = c(rep(0, m0), rep(1, m1)) |> factor(levels = c(1, 0)),
     p_value = p
   )
 }
@@ -229,7 +229,7 @@ generate_test_data <- function(m0, m1, n=5, M1=20, M2=40, S=5) {
 generate_fdr_distribution <- function(seed=17, nboot=10000) {
   set.seed(seed)
   map_dbl(1:nboot, function(i) {
-    pd <- generate_test_data(970, 30) %>% 
+    pd <- generate_test_data(970, 30) |> 
       mutate(padj = p.adjust(p_value, method="BH"))
     p_table(pd, alpha=0.05, what = "padj")$FDR
   })
@@ -237,7 +237,7 @@ generate_fdr_distribution <- function(seed=17, nboot=10000) {
 
 
 plot_fdr_distribution <- function(fdr) {
-  d <- tibble(fdr = fdr) %>% drop_na()
+  d <- tibble(fdr = fdr) |> drop_na()
   brks <- seq(-0.01, 0.3, 0.004999)
   ggplot(d) +
     theme_dist +
@@ -275,7 +275,7 @@ plot_p_distributions <- function(seed=225) {
     p_value = c(runif(6000), 1 - runif(4000)^1.6),
     hypothesis = factor(rep("0", 10000), levels=c("1", "0"))
   )
-  palt_one <- palt %>% 
+  palt_one <- palt |> 
     mutate(hypothesis = factor(rep("0", 10000), levels=c("1", "0")))
 
   list(
@@ -288,13 +288,13 @@ plot_p_distributions <- function(seed=225) {
 
 
 plot_pq <- function(dat, xlim=c(0,1), ylim=NULL, x.brks=seq(0,1,0.2), y.brks=seq(0,1,0.2)) {
-  dat <- dat %>% 
+  dat <- dat |> 
     mutate(q_value = qvalue(p_value)$qv)
 
   if(is.null(ylim)) {
-    mx <- dat %>% 
-      filter(p_value <= xlim[2]) %>% 
-      pull(q_value) %>% 
+    mx <- dat |> 
+      filter(p_value <= xlim[2]) |> 
+      pull(q_value) |> 
       max()
     ylim <- c(0, 1.02 * mx)
   }

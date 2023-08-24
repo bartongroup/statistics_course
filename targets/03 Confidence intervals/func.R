@@ -57,7 +57,7 @@ plot_4_sampling_distributions <- function(d) {
     t = c(-6, 6)
   )
   
-  map(colnames(d)[1:4], function(nm) {
+  gs <- map(colnames(d)[1:4], function(nm) {
     plot_one_dist(d[[nm]], nm, "", limits=lms[[nm]], with.outline = TRUE) +
       labs(y=NULL) +
       theme(
@@ -65,8 +65,8 @@ plot_4_sampling_distributions <- function(d) {
         axis.line.y = element_blank(),
         axis.ticks.y = element_blank()
       )
-  }) %>% 
-  plot_grid(plotlist = ., ncol=2, scale=0.95)
+  })
+  plot_grid(plotlist = gs, ncol=2, scale=0.95)
 }
 
 
@@ -145,9 +145,9 @@ example_ci <- function() {
     Day = c(rep(1, 3), rep(2, 5)),
     Value = c(0.89, 0.92, 0.90, 0.55, 0.76, 0.61, 0.83, 0.75)
   )
-  sm <- d %>%
-    group_by(Day) %>%
-    summarise(m = mean(Value), ci = qt(0.975, n() - 1) * sd(Value) / sqrt(n())) %>%
+  sm <- d |>
+    group_by(Day) |>
+    summarise(m = mean(Value), ci = qt(0.975, n() - 1) * sd(Value) / sqrt(n())) |>
     mutate(lo = m - ci, up = m + ci)
   
   g1 <- ggplot() +

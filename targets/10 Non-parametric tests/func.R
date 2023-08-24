@@ -16,7 +16,7 @@ plot_one_thing <- function(dat, what, with.error=FALSE, width=0) {
     theme(legend.position = "none") +
     labs(x="", y=what)
   if(with.error) {
-    m <- dat %>% group_by(Condition) %>% summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
+    m <- dat |> group_by(Condition) |> summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
     g <- g + 
       geom_errorbar(data=m, aes(x=Condition, ymin=M-SE, ymax=M+SE, colour=Condition), width=0.2) +
       geom_point(data=m, aes(x=Condition, y=M, colour=Condition), shape=15, size=3) +
@@ -72,7 +72,7 @@ plotU <- function(lifespan, sel=NULL, only.points=FALSE) {
   cnnct <- lifespan$cnnct
   
   if(!is.null(sel)) {
-    dat.sel <- dat %>% 
+    dat.sel <- dat |> 
       filter(Condition=="WT" & Lifespan==sel)
     cnnct.sel <- filter(cnnct, WT==sel)
   } else {
@@ -103,8 +103,8 @@ plot_mann_u <- function(lifespan) {
 }
 
 make_u_diff <- function(lifespan) {
-  wt <- lifespan$dat %>% filter(Condition == "WT") %>% pull(Lifespan)
-  ko <- lifespan$dat %>% filter(Condition == "KO") %>% pull(Lifespan)
+  wt <- lifespan$dat |> filter(Condition == "WT") |> pull(Lifespan)
+  ko <- lifespan$dat |> filter(Condition == "KO") |> pull(Lifespan)
   map_dfr(seq(-700, 240, 1), function(dm) {
     x <- wt - dm
     y <- ko
@@ -228,8 +228,8 @@ plot_lifespan_param_rank <- function(lifespan) {
 read_scores <- function() {
   s1 <- read_tsv("data/velos1_peptides_info.txt", n_max = 100)
   s2 <- read_tsv("data/velos3_peptides_info.txt", n_max = 100)
-  full_join(s1, s2, by="Sequence") %>% 
-    select(Sequence, S1 = Score.x, S2 = Score.y) %>% 
+  full_join(s1, s2, by="Sequence") |> 
+    select(Sequence, S1 = Score.x, S2 = Score.y) |> 
     pivot_longer(-Sequence)
 }
 
@@ -260,7 +260,7 @@ make_apgar_scores <- function() {
   d <- tibble(
     sample = c(rep("Old", length(control)), rep("New", length(new))),
     score = c(control, new)
-  ) %>% 
+  ) |> 
     mutate(sample = fct_relevel(sample, "Old"))
 }
 
@@ -282,15 +282,15 @@ make_before_after <- function() {
   tibble(
     Before = c(21.4, 20.2, 23.5, 17.5, 18.6, 17.0, 18.9, 19.2),
     After = c(22.6, 20.9, 23.8, 18.0, 18.4, 17.9, 19.3, 19.1),
-    sgn = sign(Before - After) %>% factor(levels = c(-1, 1))
+    sgn = sign(Before - After) |> factor(levels = c(-1, 1))
   )
 }
 
 
 plot_paired <- function(d, simple=FALSE) {
-  m <- d %>% 
-    pivot_longer(c(Before, After)) %>% 
-    mutate(name = as_factor(name) %>% fct_relevel("Before"))
+  m <- d |> 
+    pivot_longer(c(Before, After)) |> 
+    mutate(name = as_factor(name) |> fct_relevel("Before"))
 
   laby <- ifelse(simple, "", "Body mass (g)")
   g <- ggplot(m, aes(name, value)) +
@@ -318,13 +318,13 @@ plot_paired <- function(d, simple=FALSE) {
 
 
 wilcox_table <- function(d) {
-  d %>% 
+  d |> 
     mutate(
       delta = abs(Before - After),
       r = rank(delta),
       s = sign(After - Before),
       sr = r * s
-    ) %>% 
+    ) |> 
     arrange(r)
 }
 
@@ -340,7 +340,7 @@ wilcoxW <- function(d) {
 make_w_diff <- function(d) {
   m0 <- mean(d$After) - mean(d$Before)
   map_dfr(seq(-1, 1, 0.01), function(dm) {
-    d0 <- d %>% 
+    d0 <- d |> 
       mutate(After = After - m0 + dm)
     W <- wilcoxW(d0)
     data.frame(
@@ -362,9 +362,9 @@ plot_w_range <- function(d) {
     scale_y_continuous(breaks=c(-30,-20,-10,0,10,20,30)) +
     labs(x="Difference between the means", y="W")
 
-  g1 <- plot_paired(d %>% mutate(After = After - m0 - 1), simple=TRUE)
-  g2 <- plot_paired(d %>% mutate(After = After - m0) , simple=TRUE)
-  g3 <- plot_paired(d %>% mutate(After = After - m0 + 1), simple=TRUE)
+  g1 <- plot_paired(d |> mutate(After = After - m0 - 1), simple=TRUE)
+  g2 <- plot_paired(d |> mutate(After = After - m0) , simple=TRUE)
+  g3 <- plot_paired(d |> mutate(After = After - m0 + 1), simple=TRUE)
 
   list(
     W_plot = g,
@@ -381,7 +381,7 @@ generate_wdist <- function(seed=123, nx, nsim=100000) {
     tibble(
       Before = rnorm(nx),
       After = rnorm(nx)
-    ) %>% 
+    ) |> 
     wilcoxW()
   })
 }
@@ -434,7 +434,7 @@ plot_wdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
 
 
 read_mice_lifespan <- function(file) {
-  read_tsv(file) %>% 
+  read_tsv(file) |> 
     mutate(
       Rank = rank(Lifespan, ties.method="average"),
       Country = factor(Country, levels=COUNTRIES)
@@ -443,8 +443,8 @@ read_mice_lifespan <- function(file) {
 
 
 plot_rank <- function(mice) {
-  m <- mice %>%
-    group_by(Rank) %>%
+  m <- mice |>
+    group_by(Rank) |>
     mutate(idx = row_number(Rank))
   labsi <- c(1, seq(5,40,5))
   labs <- rep("", 40)
@@ -465,8 +465,8 @@ plot_rank <- function(mice) {
 }
 
 reduce_mice <- function(mice4) {
-  mice4 %>% 
-    filter(Country %in% c("English", "Scottish")) %>% 
+  mice4 |> 
+    filter(Country %in% c("English", "Scottish")) |> 
     mutate(Rank = rank(Lifespan, ties.method="random"))
 }
 
@@ -573,19 +573,19 @@ plot_cumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmar
   mn <- mn - xmargin * delta
   mx <- mx + xmargin * delta
   
-  dat <- dat %>%
-    mutate(value = !!sym(what)) %>%
-    filter(Country %in% vars) %>%
-    group_by(Country) %>%
-    arrange(value) %>% 
-    mutate(idx = row_number(Country), c=1) %>% 
-    mutate(cumdist = cumsum(c) / n()) %>% 
-    mutate(Group = as.integer(Country))  %>% 
-    mutate(y = -ymargin * Group) %>%
+  dat <- dat |>
+    mutate(value = !!sym(what)) |>
+    filter(Country %in% vars) |>
+    group_by(Country) |>
+    arrange(value) |> 
+    mutate(idx = row_number(Country), c=1) |> 
+    mutate(cumdist = cumsum(c) / n()) |> 
+    mutate(Group = as.integer(Country))  |> 
+    mutate(y = -ymargin * Group) |>
     as.data.frame()
-  dat2 <- dat %>% 
-    add_row(Country=vars, value=mn, cumdist=0) %>%
-    add_row(Country=vars, value=mx, cumdist=1) %>%
+  dat2 <- dat |> 
+    add_row(Country=vars, value=mn, cumdist=0) |>
+    add_row(Country=vars, value=mx, cumdist=1) |>
     arrange(value, cumdist)
   
   g <- ggplot(dat2, aes(x=value, y=cumdist, colour=Country)) +
@@ -602,10 +602,10 @@ plot_cumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmar
 
 
 plot_ks_2 <- function(mice4, countries) {
-  mice2 <- mice4 %>% 
+  mice2 <- mice4 |> 
     filter(Country %in% countries)
-  m <- mice2 %>%
-    group_split(Country) %>% 
+  m <- mice2 |>
+    group_split(Country) |> 
     map(function(w) pull(w, Lifespan))
 
   test <- ks.test(m[[1]], m[[2]])

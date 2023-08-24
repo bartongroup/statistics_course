@@ -51,10 +51,10 @@ plot_normal_sigmas <- function(M, S) {
 
 
 plot_baseball_normal <- function(baseball) {
-  baseball <- baseball %>% 
+  baseball <- baseball |> 
     mutate(height = 2.54 * `Height(inches)`)
-  dst <-  baseball %>% 
-    group_by(height) %>% 
+  dst <-  baseball |> 
+    group_by(height) |> 
     tally() 
   
   M <- mean(baseball$height)
@@ -97,7 +97,7 @@ plot_xy <- function(d, log.scale=FALSE) {
   if(log.scale) {
     xlab <- expression(log[10]~I[1])
     ylab <- expression(log[10]~I[2])
-    d <- d %>% mutate(x = log10(x), y = log10(y))
+    d <- d |> mutate(x = log10(x), y = log10(y))
   } else {
     xlab <- expression(I[1])
     ylab <- expression(I[2])
@@ -110,8 +110,8 @@ plot_xy <- function(d, log.scale=FALSE) {
 }
 
 plot_replicates_loglin <- function(d, reps) {
-  d <- d %>% 
-    select(all_of(reps)) %>% 
+  d <- d |> 
+    select(all_of(reps)) |> 
     set_names(c("x", "y"))
   list(
     lin = plot_xy(d, log.scale = FALSE),
@@ -156,7 +156,7 @@ plot_poisson_plates_dist <- function(seed=226, n=20, m=7) {
 
 
 plot_poisson_dist_examples <- function(mus = c(0.3, 1, 4, 10)) {
-  map(mus, function(mu) {
+  gs <- map(mus, function(mu) {
     xp <- 0:20
     p <- tibble(
       x = xp,
@@ -177,8 +177,8 @@ plot_poisson_dist_examples <- function(mus = c(0.3, 1, 4, 10)) {
       scale_x_continuous(breaks=c(0,5,10,15,20)) +
       scale_y_continuous(expand = expansion(mult = c(0, 0.07)), limits = c(0, NA)) +
       labs(x="k", y="")
-  }) %>% 
-    plot_grid(plotlist = ., ncol = 1, align = "v")
+  })
+  plot_grid(plotlist = gs, ncol = 1, align = "v")
 }
 
 
@@ -214,7 +214,7 @@ gen_binom <- function(size, prob) {
 
 
 plot_binoms <- function() {
-  g1 <- gen_binom(8, 0.5) %>% 
+  g1 <- gen_binom(8, 0.5) |> 
     ggplot() +
     theme_clean +
     geom_col(aes(x, y), fill=fill.colour, width=0.7, colour="grey30") +
@@ -223,7 +223,7 @@ plot_binoms <- function() {
     labs(x="Number of successes", y="Probability")
   
   
-  g2 <- gen_binom(100, 0.5) %>% 
+  g2 <- gen_binom(100, 0.5) |> 
     ggplot() +
     theme_clean +
     geom_segment(aes(x=x, xend=x, y=y, yend=0), colour="grey70") +
@@ -234,8 +234,8 @@ plot_binoms <- function() {
     labs(x="Number of successes", y="Probability")
   
   mu <- 100 * 0.01
-  g3 <- gen_binom(100, 0.01) %>% 
-    mutate(p = dpois(x, mu)) %>% 
+  g3 <- gen_binom(100, 0.01) |> 
+    mutate(p = dpois(x, mu)) |> 
     ggplot() +
     theme_clean +
     geom_col(aes(x, p), fill=fill.colour, width=0.7, colour="grey30") +
@@ -256,7 +256,7 @@ plot_binoms <- function() {
 plot_r_dists <- function() {
   g1 <- plot_fun(dnorm, x.grid=seq(-4, 4, 0.01), cut.up = 1.7) +
     theme_d
-
+  
   g2 <- plot_fun(dnorm, x.grid=seq(-4, 4, 0.01), cut.lo = -qnorm(0.975), cut.up = qnorm(0.975)) +
     theme_d
 
@@ -273,10 +273,66 @@ plot_r_dists <- function() {
     labs(x=NULL, y=NULL) +
     geom_col(data=d[7:9, ], fill=fill.colour.dark, colour="black", width=0.6, size=0.2)
 
+  g4 <- plot_fun(dt, 4, x.grid=seq(-6, 6, 0.01), cut.up = qt(0.975, 4)) +
+    theme_d
+  
+  g5 <- plot_fun(dt, 4, x.grid=seq(-6, 6, 0.01), cut.lo = -qt(0.975, 4), cut.up = qt(0.975, 4)) +
+    theme_d
+  
+  
   list(
     dnorm = g1,
     dnorm2 = g2,
-    dbinom = g3
-    
+    dbinom = g3,
+    dt = g4,
+    dt2 = g5
   )
+}
+
+
+
+sim_rand <- function(prand) {
+  n_sim <- length(prand)
+  max_n <- max(prand)
+  dst <- rep(0, max_n + 1)
+  
+  map(1:n_sim, function(i) {
+    rnd <- prand[i]
+    dst[rnd + 1] <<- dst[rnd + 1] + 1
+    tibble(
+      i = i,
+      k = 0:max_n,
+      cumul = dst
+    )
+  }) |> 
+    list_rbind()
+}
+
+plot_rand <- function(p, x_lab, y_lab, title) {
+  p |>
+    ggplot(aes(x = k, y = cumul)) +
+    theme_classic() +
+    geom_col(fill = fill.colour, colour = "black", width = 0.8) +
+    labs(x = x_lab, y = y_lab, title = paste(title, "{frame_time}")) +
+    transition_time(i) +
+    ease_aes("linear") +
+    scale_x_continuous(breaks = 0:max(p$cumul)) +
+    scale_y_continuous(limits = c(0, 1.03 * max(p$cumul)), expand = c(0, 0))
+}
+
+anim_poisson <- function(mu, n_sim = 1000, seed = 42) {
+  set.seed(seed)
+  
+  rpois(n_sim, mu) |> 
+    sim_rand() |>
+    plot_rand(x_lab = "k", y_lab = "Frequency", title = "Plate")
+}
+
+
+anim_coins <- function(n, n_sim = 1000, seed = 42) {
+  set.seed(seed)
+  
+  rbinom(n_sim, n, 0.5) |> 
+    sim_rand() |>
+    plot_rand(x_lab = "Number of heads", y_lab = "Frequency", title = "Toss")
 }

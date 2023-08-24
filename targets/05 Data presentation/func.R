@@ -10,7 +10,7 @@ good_plot <- function(seed=344) {
   d <- map_dfr(m, function(M) {
     s <- rnorm(12, M, 0.15)
     c(mean=mean(s), se=sd(s) / sqrt(length(s)))
-  }) %>% 
+  }) |> 
     mutate(
       x = x,
       ww = 1 / se^2,
@@ -45,11 +45,11 @@ show_your_data <- function() {
   d <- tibble(
     type = c(rep("WT", n1), rep("KO", n2)),
     value = c(rnorm(n1, 20, 5), rnorm(n2, 25, 7))
-  ) %>% 
+  ) |> 
     mutate(type = fct_relevel(type, "WT"))
 
-  dm <- d %>%
-    group_by(type) %>%
+  dm <- d |>
+    group_by(type) |>
     summarise(M = mean(value), SE = sd(value) / sqrt(n()))
   
   g0 <- ggplot() +
@@ -167,9 +167,9 @@ lines_and_symbols <- function() {
 
 plot_colour_blind <- function(seed=666) {
   set.seed(seed)
-  d1 <- tibble(x = runif(12, min=3, max=9)) %>% mutate(y = 20 + 0.4 * x + rnorm(12, 0, 0.4), strain="S1")
-  d2 <- tibble(x = runif(8, min=5, max=11)) %>% mutate(y = 21 + 0.45 * x + rnorm(8, 0, 0.5), strain="S2")
-  d3 <- tibble(x = runif(9, min=7, max=10)) %>% mutate(y = 18 + 0.3 * x + rnorm(9, 0, 0.5), strain="S3")
+  d1 <- tibble(x = runif(12, min=3, max=9)) |> mutate(y = 20 + 0.4 * x + rnorm(12, 0, 0.4), strain="S1")
+  d2 <- tibble(x = runif(8, min=5, max=11)) |> mutate(y = 21 + 0.45 * x + rnorm(8, 0, 0.5), strain="S2")
+  d3 <- tibble(x = runif(9, min=7, max=10)) |> mutate(y = 18 + 0.3 * x + rnorm(9, 0, 0.5), strain="S3")
   
   d <- bind_rows(d1, d2, d3)
   
@@ -189,9 +189,9 @@ plot_colour_blind <- function(seed=666) {
 plot_loglin_1 <- function(dat, seed=45) {
   set.seed(seed)
   
-  d <- dat %>% 
-    select(c(2, 3)) %>% 
-    set_names("x", "y") %>% 
+  d <- dat |> 
+    select(c(2, 3)) |> 
+    set_names("x", "y") |> 
     filter(x > 0 & y > 0) 
 
   mx <- max(d) * 1.03
@@ -226,7 +226,7 @@ plot_loglin_2 <- function(seed=77) {
     x = 1:6 / 6,
     y1 = c(1.3, 1.5, 2.5, 3.0, 3.6, 4.1),
     s1 = 0.2
-  ) %>% 
+  ) |> 
     mutate(
       y2 = 10^y1,
       s2 = log(10) * y2 * s1
@@ -255,7 +255,7 @@ plot_loglin_2 <- function(seed=77) {
   d <- tibble(
     type = c(rep("WT", n1), rep("KO", n2)),
     log.value = c(rnorm(n1, 2.1, 0.3), rnorm(n2, 1.1, 0.2))
-  ) %>% 
+  ) |> 
     mutate(
       type = fct_relevel(type, "WT"),
       value = as.integer(10^log.value),
@@ -393,14 +393,14 @@ plot_barplot_1 <- function() {
     s = c(86, 23, 67, 55, 95, 12, 34, 34),
     cond = rep(c("WT", "KO1", "KO2", "KO3"), 2),
     treat = c(rep("DMSO", 4), rep("DD342", 4))
-  ) %>%
-    mutate(p = s / n, cond = relevel(factor(cond), "WT"), treat = relevel(factor(treat), "DMSO")) %>% 
-    nest(data = c(n ,s)) %>% 
+  ) |>
+    mutate(p = s / n, cond = relevel(factor(cond), "WT"), treat = relevel(factor(treat), "DMSO")) |> 
+    nest(data = c(n ,s)) |> 
     mutate(
       tst = map(data, ~prop.test(.x$s, .x$n)),
       tid = map(tst, broom::tidy)
-    ) %>% 
-    unnest(tid) %>% 
+    ) |> 
+    unnest(tid) |> 
     select(cond, p, treat, conf.low, conf.high)
   
   
@@ -450,7 +450,7 @@ bad_bar_plots <- function() {
   pl2 <- bar1(d, lims=c(350, 850))
   g1 <- plot_grid(pl1, pl2, nrow=1, align="h")
   
-  d <- d %>% mutate(y = log10(y))
+  d <- d |> mutate(y = log10(y))
   
   pl1 <- bar1(d, lims=c(0, 3), ylab=expression(log[10]~count))
   pl2 <- bar1(d, lims=c(2.2, 3), ylab=expression(log[10]~count))
@@ -471,7 +471,7 @@ bar_problems <- function() {
   d <- map_dfr(1:length(M), function(i) {
     tibble(sample=i, speed=rnorm(n, M[i], 0.15))
   })
-  dm <- d %>% group_by(sample) %>% summarise(m=mean(speed), se=sd(speed) / sqrt(n()))
+  dm <- d |> group_by(sample) |> summarise(m=mean(speed), se=sd(speed) / sqrt(n()))
   
   g0 <- ggplot() +
     theme_clean +
@@ -542,7 +542,7 @@ dynamite_plots <- function() {
     value = c(100, 87, 59),
     lo = c(NA, 61, 48),
     up = c(NA, 98, 69)
-  ) %>% 
+  ) |> 
     mutate(type = fct_relevel(type, "WT"))
   
   

@@ -55,7 +55,7 @@ generate_fold_change <- function(M, S, n, FC, epsM=0.1, epsS=0.1) {
 
 plot_cohens_d_example <- function(seed=123456) {
   set.seed(seed)
-  generate_cohens_d(20, 5, 12, 1.1) %>% 
+  generate_cohens_d(20, 5, 12, 1.1) |> 
     plot_mice_box(with.boxes = FALSE, with.means = TRUE, cex=0.5)
 }
 
@@ -68,16 +68,16 @@ make_cohen_sizes <- function(seed=999, n=10, M=20, S=5) {
   )
   map_dfr(1:nrow(cohens.sizes), function(i) {
     r <- cohens.sizes[i, ]
-    generate_cohens_d(M, S, n, r$d) %>% 
+    generate_cohens_d(M, S, n, r$d) |> 
       mutate(Size = r$size)
-  }) %>% 
+  }) |> 
     mutate(Size = factor(Size, levels = cohens.sizes$size))
 }
 
 
 plot_cohens_sizes <- function(cs) {
-  cs %>% 
-    group_split(Size) %>% 
+  gs <- cs |> 
+    group_split(Size) |> 
     map(function(d) {
       s <- first(d$Size)
       lm <- ifelse(s == "Very small", 0, -3)
@@ -94,13 +94,13 @@ plot_cohens_sizes <- function(cs) {
           axis.line = element_blank(),
           plot.title = element_text(hjust = 0.5)
         )
-    }) %>% 
-  plot_grid(plotlist = ., nrow=1)
+    })
+  plot_grid(plotlist = gs, nrow=1)
 }
 
 fold_change_fig <- function(M, S, n, FC=2) {
   fc <- generate_fold_change(M, S, n, FC)
-  d <- cohens_d(filter(fc, Country=="English")$Mass, filter(fc, Country=="Scottish")$Mass) %>% 
+  d <- cohens_d(filter(fc, Country=="English")$Mass, filter(fc, Country=="Scottish")$Mass) |> 
     signif(2)
   plot_mice_box(fc, cex=2.5, size=1.5, with.boxes=FALSE, with.mean=TRUE) +
     ylim(0,50) +
@@ -110,8 +110,8 @@ fold_change_fig <- function(M, S, n, FC=2) {
 sample_size_fig <- function(n, d, M, S) {
   dat <- generate_cohens_d(M, S, n, d)
   tst <- t.test(Mass ~ Country, data=dat)
-  t <- abs(tst$statistic) %>% as.numeric() %>% signif(2)
-  p <- tst$p.value %>% as.numeric() %>% signif(1) %>% format(scientific=FALSE)
+  t <- abs(tst$statistic) |> as.numeric() |> signif(2)
+  p <- tst$p.value |> as.numeric() |> signif(1) |> format(scientific=FALSE)
   plot_mice_box(dat, size=1.1, cex=1.5, with.boxes=FALSE, with.mean=TRUE) +
     ylim(0,50) +
     annotate("text", x=0.6, y=50, hjust=0, label=glue::glue("n = {n}")) +
@@ -155,7 +155,7 @@ generate_ANOVA <- function(f=1, M=c(20, 20, 20, 30), S=5, n=8, seed=42, eps=1e-3
         Country = COUNTRIES[i],
         Mass = rnorm(n, M[i], S)
       )
-    }) %>% 
+    }) |> 
       mutate(Country = factor(Country, levels=COUNTRIES))
     av <- aov_results(d)
     f.obs <- sqrt((av$F - 1) / n)
@@ -318,37 +318,37 @@ power_t_test <- function(dM, S, n) {
 
 
 plot_power_t_test <- function(M, S, n) {
-  map(M, function(m) {
+  gs <- map(M, function(m) {
     plot_two_t(20, m, S=S, n=n)
-  }) %>% 
-    plot_grid(plotlist = ., ncol=1)
+  })
+  plot_grid(plotlist = gs, ncol=1)
 }
 
 t_power_curve <- function(ns=seq(2,10,1), deltas=seq(-10, 10, 0.02)) {
-  expand_grid(n = ns, delta= deltas) %>% 
-    rowwise() %>% 
-    mutate(power = power.t.test(n=n, delta=delta)$power) %>% 
+  expand_grid(n = ns, delta= deltas) |> 
+    rowwise() |> 
+    mutate(power = power.t.test(n=n, delta=delta)$power) |> 
     mutate(n  = factor(n, levels=ns))
 }
 
 t_size_curve <- function(ns=seq(2,50,1), powers=c(0.6, 0.8, 0.95)) {
-  expand_grid(n = ns, power = powers) %>% 
-    rowwise() %>% 
-    mutate(delta = power.t.test(n=n, power=power, sd=1, alternative = "two.sided")$delta) %>% 
+  expand_grid(n = ns, power = powers) |> 
+    rowwise() |> 
+    mutate(delta = power.t.test(n=n, power=power, sd=1, alternative = "two.sided")$delta) |> 
     mutate(power = factor(power, levels = powers))
 }
 
 anova_power_curve <- function(ns=seq(2,10,1), fs=seq(0, 5, 0.01), k=4) {
-  expand_grid(n = ns, delta = fs) %>% 
-    rowwise() %>% 
-    mutate(power = pwr.anova.test(n=n, k=k, f=delta)$power) %>% 
+  expand_grid(n = ns, delta = fs) |> 
+    rowwise() |> 
+    mutate(power = pwr.anova.test(n=n, k=k, f=delta)$power) |> 
     mutate(n  = factor(n, levels=ns))
 }
 
 anova_size_curve <- function(ns=seq(2,50,1), powers=c(0.6, 0.8, 0.95), k=4) {
-  expand_grid(n = ns, power = powers) %>% 
-    rowwise() %>% 
-    mutate(delta = pwr.anova.test(n=n, k=k, power=power)$f) %>% 
+  expand_grid(n = ns, power = powers) |> 
+    rowwise() |> 
+    mutate(delta = pwr.anova.test(n=n, k=k, power=power)$f) |> 
     mutate(power = factor(power, levels = powers))
 }
 
@@ -426,15 +426,15 @@ generate_worked_example <- function(seed=1002) {
       Group = name[i],
       Volume = x
     )
-  }) %>% 
+  }) |> 
     mutate(Group = factor(Group, levels = name))
 }
 
 
 plot_tumour_example <- function(tumour) {
-  sdt <- tumour %>%
-    group_by(Group) %>%
-    summarise(M=mean(Volume), sd=sd(Volume), n=n()) %>%
+  sdt <- tumour |>
+    group_by(Group) |>
+    summarise(M=mean(Volume), sd=sd(Volume), n=n()) |>
     mutate(sde=sd / sqrt(2*(n-1)))
   
   g1 <- ggplot() +

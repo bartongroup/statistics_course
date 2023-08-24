@@ -25,8 +25,8 @@ biomart_gene_download <- function(mart) {
     "ensembl_gene_id",
     "external_gene_name",
     "description"
-  ), mart=mart) %>% 
-    as_tibble() %>% 
+  ), mart=mart) |> 
+    as_tibble() |> 
     rename(
       chr = chromosome_name,
       start = start_position,
@@ -51,7 +51,7 @@ plot_discrete_distribution_cut <- function(lo, up, FUN, ..., dcut=NULL) {
     scale_y_continuous(expand=expansion(mult = c(0, 0.03))) +
     labs(x = "k", y = "P(X = k)")
   if(!is.null(dcut)) {
-    dist_cut <- dist %>% filter(x >= dcut[1] & x <= dcut[2])
+    dist_cut <- dist |> filter(x >= dcut[1] & x <= dcut[2])
     g <- g + geom_col(data=dist_cut, fill=fill.colour.dark, colour="black", width=0.7, size=0.3)
   }
   g
@@ -203,7 +203,7 @@ t_cut <- function(t.obs, dof) {
     x = c(t.obs, xx, max(xx), t.obs),
     y = c(0, dt(xx, dof), 0, 0)
   )
-  df1 <- df %>% mutate(x = -x)
+  df1 <- df |> mutate(x = -x)
 
   g1 <- ggplot(df, aes(x=x, y=..density..)) +
     theme_dist +
@@ -239,7 +239,7 @@ plot_mice_box <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=1, s
     g <- g + geom_beeswarm(data=d, aes_string(x="Country", y=what, fill="Country"), shape=21, cex=cex, size=size, priority = "density")
   }
   if(with.means) {
-    m <- d %>% group_by(Country) %>% summarise(M = mean(!!sym(what))) %>% mutate(i=as.integer(as.factor(Country)))
+    m <- d |> group_by(Country) |> summarise(M = mean(!!sym(what))) |> mutate(i=as.integer(as.factor(Country)))
     #g <- g + geom_boxplot(data=m, aes(x=Country, middle=M, ymin=M, lower=M, upper=M, ymax=M), stat="identity", width=0.7, lwd=0.6, fatten=0, colour="grey40")
     g <- g + geom_segment(data=m, aes(x=i-m.width, xend=i+m.width, y=M, yend=M), size=0.9, colour="grey30", lineend="round")
   }
@@ -248,20 +248,20 @@ plot_mice_box <- function(d, what="Mass", ylab="Mass (g)", limits=NULL, cex=1, s
 
 
 get_means <- function(mice, width, what="Mass") {
-  m <- mice %>% 
-    mutate(val = get(what)) %>% 
-    mutate(grand_mean = mean(val)) %>% 
-    mutate(group = as.integer(Country)) %>% 
-    group_by(group) %>% 
+  m <- mice |> 
+    mutate(val = get(what)) |> 
+    mutate(grand_mean = mean(val)) |> 
+    mutate(group = as.integer(Country)) |> 
+    group_by(group) |> 
     mutate(
       N = n(),
       n = seq_along(val),
       x = group + width*(n - N/2 - 1/2) / (N - 1),
       Mean = mean(val)
-    ) %>% 
+    ) |> 
     ungroup()
-  M <- m %>% 
-    select(Country, Mean, x = group) %>% 
+  M <- m |> 
+    select(Country, Mean, x = group) |> 
     distinct()
   list(mice = m, means = M)
 }

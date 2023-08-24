@@ -2,11 +2,11 @@
 lecture_13 <- function() {
   
   init <- list(
-    tar_target(pref13, "figures/13_linear_models")
+    tar_target(path13, "figures/13_linear_models")
   )
 
   read_data <- list(
-    tar_target(salaries, as_tibble(carData::Salaries) %>% mutate(rank = fct_relevel(rank, "AsstProf")))
+    tar_target(salaries, as_tibble(carData::Salaries) |> mutate(rank = fct_relevel(rank, "AsstProf")))
   )
   
   comp <- list(
@@ -29,34 +29,34 @@ lecture_13 <- function() {
   make_figures <- list(
     # quantitative model
     tar_target(figs_quant_lm, plot_quant_lm(mice_quant)),
-    tar_target(s_qlm1, gs(figs_quant_lm$simple_linear, pref13, 3, 3)),
-    tar_target(s_qlm2, gs(figs_quant_lm$simple_linear_residuals, pref13, 3, 3)),
+    tar_target(s_qlm1, gs(figs_quant_lm$simple_linear, path13, 3, 3)),
+    tar_target(s_qlm2, gs(figs_quant_lm$simple_linear_residuals, path13, 3, 3)),
     
     # mice diet 5
     tar_target(figs_mice_diet, plot_mice_5_lm(m5, coef(fit_m5), coef(fit_m5_0))),
-    tar_target(s_m5_1, gs(figs_mice_diet$mice_diet, pref13, 3, 3)),
-    tar_target(s_m5_2, gs(figs_mice_diet$mice_diet_coef, pref13, 3, 3)),
-    tar_target(s_m5_3, gs(figs_mice_diet$mice_diet_coef0, pref13, 3, 3)),
+    tar_target(s_m5_1, gs(figs_mice_diet$mice_diet, path13, 3, 3)),
+    tar_target(s_m5_2, gs(figs_mice_diet$mice_diet_coef, path13, 3, 3)),
+    tar_target(s_m5_3, gs(figs_mice_diet$mice_diet_coef0, path13, 3, 3)),
     
-    tar_target(s_m5c_1, plot_coefficients(fit_m5, nudge=0.8) %>% gs(pref13, 3, 3, "mice_diet_coef")),
-    tar_target(s_m5c_2, plot_coefficients(fit_m5_0, nudge=1.2) %>% gs(pref13, 3, 3, "mice_diet_coef_0")),
+    tar_target(s_m5c_1, plot_coefficients(fit_m5, nudge=0.8) |> gs(path13, 3, 3, "mice_diet_coef")),
+    tar_target(s_m5c_2, plot_coefficients(fit_m5_0, nudge=1.2) |> gs(path13, 3, 3, "mice_diet_coef_0")),
     
     # mice diet sex 12
     tar_target(figs_mice_diet_sex, plot_mice_12_lm(m12, coef(fit_m12), coef(fit_m12_i))),
-    tar_target(s_m12_1, gs(figs_mice_diet_sex$mice_diet_sex, pref13, 4, 4)),
-    tar_target(s_m12_2, gs(figs_mice_diet_sex$mice_diet_sex_coef, pref13, 4, 4)),
-    tar_target(s_m12_3, gs(figs_mice_diet_sex$mice_diet_sex_coef_i, pref13, 4, 4)),
-    tar_target(s_m12a, plot_anova_2(m12, col_var="diet", row_var="sex", val_var="mass", palette=c(norm=okabe_ito_palette[1], hifat=okabe_ito_palette[2])) %>% gs(pref13, 5, 3.5, "mice_diet_sex_anova")),
+    tar_target(s_m12_1, gs(figs_mice_diet_sex$mice_diet_sex, path13, 4, 4)),
+    tar_target(s_m12_2, gs(figs_mice_diet_sex$mice_diet_sex_coef, path13, 4, 4)),
+    tar_target(s_m12_3, gs(figs_mice_diet_sex$mice_diet_sex_coef_i, path13, 4, 4)),
+    tar_target(s_m12a, plot_anova_2(m12, col_var="diet", row_var="sex", val_var="mass", palette=c(norm=okabe_ito_palette[1], hifat=okabe_ito_palette[2])) |> gs(path13, 5, 3.5, "mice_diet_sex_anova")),
     
     # R2
     tar_target(figs_r2, plot_r2_examples()),
-    tar_target(s_r2_1, gs(figs_r2$r2_large, pref13, 4, 4)),
-    tar_target(s_r2_2, gs(figs_r2$r2_small, pref13, 4, 4)),
+    tar_target(s_r2_1, gs(figs_r2$r2_large, path13, 4, 4)),
+    tar_target(s_r2_2, gs(figs_r2$r2_small, path13, 4, 4)),
     
     # Example
-    tar_target(s_sal, plot_salaries(salaries) %>% gs(pref13, 8, 5, "salaries")),
-    tar_target(s_saly, plot_salaries_years(salaries) %>% gs(pref13, 3, 2.5, "salaries_years")),
-    tar_target(s_salp, plot_female_proportion(salaries) %>% gs(pref13, 4, 4, "salaries_female_proportion"))
+    tar_target(s_sal, plot_salaries(salaries) |> gs(path13, 8, 5, "salaries")),
+    tar_target(s_saly, plot_salaries_years(salaries) |> gs(path13, 3, 2.5, "salaries_years")),
+    tar_target(s_salp, plot_female_proportion(salaries) |> gs(path13, 4, 4, "salaries_female_proportion"))
   )
   
   make_tables <- list(

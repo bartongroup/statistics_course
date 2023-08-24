@@ -6,10 +6,10 @@ ef_palette <- c("lightgoldenrod3", "#009E73")
 okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 british.palette <- c(
-  English = rgb(255, 90, 90, max=255),
-  Scottish = rgb(110, 110, 255, max=255),
-  Welsh = rgb(255, 214, 0, max=255),
-  N.Irish = rgb(20, 185, 90, max=255)
+  English = rgb(255, 90, 90, maxColorValue = 255),
+  Scottish = rgb(110, 110, 255, maxColorValue = 255),
+  Welsh = rgb(255, 214, 0, maxColorValue = 255),
+  N.Irish = rgb(20, 185, 90, maxColorValue = 255)
 )
 
 theme_clean <- 
@@ -35,10 +35,21 @@ theme_d <- ggplot2::theme(
 )
 
 
-gs <- function(pl, prefix, width, height, nm=NULL, dpi=300) {
-  if(!dir.exists(prefix)) dir.create(prefix, recursive=TRUE)
+gs <- function(pl, prefix, width, height, nm = NULL, dpi = 300, dev = "png") {
+  if(!dir.exists(prefix)) dir.create(prefix, recursive = TRUE)
   
-  if(is.null(nm)) nm <- deparse(substitute(pl)) %>% str_remove("^fig_") %>% str_remove("^.+\\$")
-  file <- file.path(prefix, glue("{nm}.png"))
-  ggsave(file, pl, device="png", width=width, height=height, dpi=dpi)
+  if(is.null(nm)) nm <- deparse(substitute(pl)) |> str_remove("^fig_") |> str_remove("^.+\\$")
+  file <- file.path(prefix, glue("{nm}.{dev}"))
+  ggsave(file, pl, device = dev, width=width, height=height, dpi=dpi)
+}
+
+
+ans <- function(pl, prefix, width, height, nm = NULL, dpi = 300, nframes = 1000, fps = 30) {
+  if(!dir.exists(prefix)) dir.create(prefix, recursive = TRUE)
+  
+  if(is.null(nm)) nm <- deparse(substitute(pl)) |> str_remove("^fig_") |> str_remove("^.+\\$")
+  file <- file.path(prefix, glue("{nm}.gif"))
+  anim <- animate(pl, nframes = nframes, fps = fps, width = width, height = height, units = "in", res = dpi,
+                  renderer = gifski_renderer(loop = FALSE))
+  anim_save(file, animation = anim)
 }

@@ -22,18 +22,18 @@ aov2Results <- function(dat) {
 
 
 makeVar <- function(M, S=5, n=20) {
-  M %>%
-    set_names(COUNTRIES) %>%
-    map_dfr(rnorm, n=n, sd=S) %>%
-    pivot_longer(everything(), names_to = "Country", values_to = "Mass") %>% 
-    mutate(Country = factor(Country, levels = COUNTRIES)) %>% 
+  M |>
+    set_names(COUNTRIES) |>
+    map_dfr(rnorm, n=n, sd=S) |>
+    pivot_longer(everything(), names_to = "Country", values_to = "Mass") |> 
+    mutate(Country = factor(Country, levels = COUNTRIES)) |> 
     mutate(x = as.integer(Country))
 }
 
 
 plotWB <- function(d, maxy=40) {
   aov <- aovResults(d)
-  dm <- d %>% group_by(Country) %>% summarise(M=mean(Mass), SD=sd(Mass)) %>% mutate(x=as.numeric(Country))
+  dm <- d |> group_by(Country) |> summarise(M=mean(Mass), SD=sd(Mass)) |> mutate(x=as.numeric(Country))
   vb <- data.frame(x=5, M=20, SD=sqrt(aov$MS.b))
   ggplot() +
     theme_clean +
@@ -81,7 +81,7 @@ generate_F_mice <- function(mice, seed=33, nsim=100000) {
   set.seed(seed)
   n <- nrow(mice)
   map_dbl(1:nsim, function(i) {
-    m <- mice %>% 
+    m <- mice |> 
       mutate(Mass = rnorm(n, 20, 5))
     res <- aovResults(m)
     res$F
@@ -92,7 +92,7 @@ generate_no_effect_anova <- function(mice, seed=8) {
   set.seed(seed)
   n <- nrow(mice)
   repeat {
-    m <- mice %>% 
+    m <- mice |> 
       mutate(Mass = rnorm(n, 20, 5))
     res <- aovResults(m)
     if(res$F < 1.1 && res$F > 0.9 && res$p > 0.1) break
@@ -102,11 +102,11 @@ generate_no_effect_anova <- function(mice, seed=8) {
 
 
 plot_anova_2 <- function(m, ylim=c(0,40), text.size=10, col_var="Country", row_var="Colour", val_var="Mass", palette=british.palette) {
-  mice <- m %>% 
+  mice <- m |> 
     mutate(col = get(col_var), row = get(row_var), val = get(val_var))
   
   grand.mean <- mean(mice$val)
-  mice.gr <- mice %>% group_by(col, row) %>% summarise(M = mean(val))
+  mice.gr <- mice |> group_by(col, row) |> summarise(M = mean(val))
   
   g1 <- ggplot(mice, aes(x=1, y=val)) +
     theme_classic() +
@@ -203,10 +203,10 @@ generate_mices_2way <- function(A = matrix(c(0, 0, 0, 0), nrow=1),
     X <- m + AA + BB + G + rnorm(8, 0, s)
     rownames(X) <- colours
     colnames(X) <- countries
-    X %>%
-      as_tibble(rownames = "Colour") %>% 
+    X |>
+      as_tibble(rownames = "Colour") |> 
       pivot_longer(-Colour, names_to = "Country", values_to = "Mass")
-  }) %>% 
+  }) |> 
     mutate(Colour = factor(Colour, levels = COLOURS), Country = factor(Country, levels = COUNTRIES))
 }
 
@@ -255,9 +255,9 @@ plot_anova_2_4nulls <- function() {
 simple_anova_plot <- function(dat, title="") {
   colnames(dat) <- c("Drug", "Placebo")
   rownames(dat) <- c("Male", "Female")
-  dat %>% 
-    as_tibble(rownames = "Gender") %>% 
-    pivot_longer(-Gender, names_to = "Treatment", values_to = "Score") %>% 
+  dat |> 
+    as_tibble(rownames = "Gender") |> 
+    pivot_longer(-Gender, names_to = "Treatment", values_to = "Score") |> 
   ggplot(aes(x=Gender, y=Score, group=Treatment)) +
     theme_clean +
     geom_line(aes(colour=Treatment)) +
@@ -283,12 +283,12 @@ plot_drug_anova <- function() {
 
 
 plot_time_course <- function(tc) {
-  tc <- as_tibble(tc) %>% 
-    group_by(Treatment, Course) %>% 
-    mutate(nMass = Mass / Mass[Time == 0]) %>% 
+  tc <- as_tibble(tc) |> 
+    group_by(Treatment, Course) |> 
+    mutate(nMass = Mass / Mass[Time == 0]) |> 
     ungroup()
-  tcm <- tc %>%
-    group_by(Treatment, Time) %>%
+  tcm <- tc |>
+    group_by(Treatment, Time) |>
     summarise(M = mean(Mass), SE = sd(Mass) / sqrt(n()), nM = mean(nMass), nSE = sd(nMass) / sqrt(n()))
   
   g0 <- ggplot() +
@@ -397,9 +397,9 @@ plot_sal <- function(sal, what) {
 
 
 plot_salaries <- function(sal) {
-  snames <- colnames(sal %>% select(-salary))
-  map(snames, ~plot_sal(sal, .x)) %>% 
-    plot_grid(plotlist = .)
+  snames <- colnames(sal |> select(-salary))
+  gs <- map(snames, ~plot_sal(sal, .x))
+  plot_grid(plotlist = gs)
 }
 
 
@@ -411,14 +411,14 @@ plot_salaries_years <- function(sal) {
 
 
 plot_female_proportion <- function(sal) {
-  fs <- sal %>% 
-    group_by(rank) %>% 
-    summarise(n_female = sum(sex == "Female"), n_male = sum(sex == "Male"), n = n()) %>% 
-    nest(data = c(n_female, n)) %>% 
+  fs <- sal |> 
+    group_by(rank) |> 
+    summarise(n_female = sum(sex == "Female"), n_male = sum(sex == "Male"), n = n()) |> 
+    nest(data = c(n_female, n)) |> 
     mutate(
       test = map(data, ~prop.test(.x$n_female, .x$n)),
       tidied = map(test, broom::tidy)
-    ) %>% 
+    ) |> 
     unnest(tidied)
   
   ggplot(fs, aes(x=rank, y=estimate, ymin=conf.low, ymax=conf.high)) +
