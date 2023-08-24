@@ -3,20 +3,34 @@ library(tarchetypes)
 source("R/setup.R")
 source("R/general.R")
 
-packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "ggforce", "lemon", "dendextend", "gganimate", "ggalt", "gsl", "edgeR", "limma","glue", "furrr", "kolmim", "pwr", "Rfast", "qvalue", "tidyverse")
-tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
 
-# for interactive session only
-if(interactive()) sapply(packages, library, character.only=TRUE)
+# attach R packages
+required_packages <- read.delim("packages.txt", header = FALSE, col.names = "name")$name
 
+# tar options
+tar_option_set(
+  packages = required_packages,
+  format = "qs",
+  trust_object_timestamps = TRUE
+)
+
+# Create dirs if necessary
+for (d in c("fig")) if (!dir.exists(d)) dir.create(d)
+
+# load all functions from .R files
 files_R <- Sys.glob("targets/*/*.R")
 sr_ <- sapply(files_R, source)
 
+# load all functions from .R files
 sesinfo <- list(
   tar_target(session_info, sessionInfo())
 )
 
+# Add session info
+sesinfo <- list(
+  tar_force(session_info, sessionInfo(), force = TRUE)
+)
 
 c(
   sesinfo,
