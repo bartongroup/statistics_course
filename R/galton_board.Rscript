@@ -1,0 +1,144 @@
+library(chipmunkcore)
+library(chipmunkbasic)
+library(tidyverse)
+library(progress)
+library(doParallel)
+library(foreach)
+
+create_pins <- function(n_x = 40, n_y = 15, step_y = 3, top_y = 90, pin_width = 0.05) {
+  map(1:n_y, function(i) {
+    y <- top_y - i * step_y
+    x <- seq(-n_x, n_x, 2)
+    if(i %% 2 == 0) x <- x[-1] - 1
+    tibble(
+      x1 = x - pin_width,
+      y1 = y,
+      x2 = x + pin_width,
+      y2 = y
+    )
+  }) |> 
+    list_rbind()
+}
+
+create_slots <- function(floor = 0, top = 40, width = 30, step = 3.3) {
+  bottom <- tibble(
+    x1 = -width,
+    y1 = floor,
+    x2 = width,
+    y2 = floor
+  )
+  
+  xs <- seq(step / 2, width, step)
+  walls <- tibble(
+    x1 = c(-rev(xs), xs),
+    y1 = floor,
+    x2 = x1,
+    y2 = top
+  )  
+  bind_rows(bottom, walls)
+}
+
+
+drop_ball <- function(cm, y = 110, radius = 0.8, friction = 0.01) {
+  cm$add_circle(
+    x = rnorm(1, 0, 0.01),
+    y = y,
+    radius = radius,
+    friction = friction
+  )
+}
+
+init_simulation <- function(time_step = 0.005) {
+  pins <- create_pins()
+  slots <- create_slots()
+  segments <- bind_rows(pins, slots)  
+  
+  cm <- Chipmunk$new(time_step = time_step)
+  
+  for(i in 1:nrow(segments)) {
+    v <- segments[i, ]
+    cm$add_static_segment(v$x1, v$y1, v$x2, v$y2)
+  }
+  list(
+    pins = pins,
+    slots = slots,
+    cm = cm
+  )
+}
+
+
+main_simulation <- function(cm, n_steps = 3000, n_balls = 300, ball_delta = 8, time_step = 0.005, advance_step = 5) {
+  pb <- progress_bar$new(total = n_steps)
+  
+  map(1:n_steps, function(i) {
+    pb$tick()
+
+    if(i %% ball_delta == 1 & n_balls > 0) {
+      drop_ball(cm)
+      n_balls <<- n_balls - 1
+    }
+    
+    cm$advance(advance_step)
+    cm$get_circles()
+  }) |> 
+    list_rbind(names_to = "step") |> 
+    as_tibble()
+}
+
+theme_none <- theme(
+  panel.grid = element_blank(),
+  axis.text = element_blank(),
+  axis.ticks = element_blank(),
+  panel.background = element_blank()
+)
+
+plot_simulation_step <- function(pins, slots, bodies, i) {
+  d <- bodies |> filter(step == i)
+  ggplot() +
+    geom_point(data = d, aes(x, y), size = 1.6, colour = "brown") +
+    geom_segment(data = pins, aes(x = x1, y = y1, xend = x2, yend = y2), colour = "black") +
+    geom_segment(data = slots, aes(x = x1, y = y1, xend = x2, yend = y2), colour = "grey80") +
+    coord_fixed() +
+    theme_none +
+    labs(x = NULL, y = NULL) +
+    ylim(0, 120) +
+    xlim(-40, 40)
+}
+
+plot_normal <- function(sigma, norm) {
+  d <- tibble(
+    xl = seq(-100, 100, 1),
+    yl = norm * dnorm(xl, 0, sigma)
+  )
+  geom_line(data = d, aes(x = xl, y = yl), colour = "red")
+}
+
+make_plots <- function(sim, bd) {
+  
+  unlink(list.files("galton", "*.png", full.names = TRUE))
+  n_steps <- max(bd$step)
+  
+  cl <- makePSOCKcluster(6)
+  registerDoParallel(cl)
+  foreach(
+    i = 1:n_steps,
+    .export = c("plot_simulation_step", "plot_normal", "theme_none"),
+    .packages = "tidyverse"
+  ) %dopar% {
+    pl <- plot_simulation_step(sim$pins, sim$slots, bd, i) + plot_normal(7, 660)
+    outfile <- sprintf("galton/%04i.png", i)
+    ggsave(outfile, pl, width = 7, height = 6, dev = "png", dpi = 150)
+  }
+  stopCluster(cl)
+}
+
+#####################################
+
+set.seed(256)
+
+sim <- init_simulation()
+bd <- main_simulation(sim$cm, n_steps = 2300, n_balls = 250)
+
+make_plots(sim, bd)
+
+system("ffmpeg -y -framerate 40 -pattern_type glob -i 'galton/*.png' -pix_fmt yuv420p  galton.mp4")
