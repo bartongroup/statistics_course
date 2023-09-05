@@ -19,3 +19,4 @@ pwr
 Rfast
 qvalue
 tidyverse
+broom

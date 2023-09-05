@@ -3,12 +3,12 @@ srnorm <- function(seed, ...) {
   rnorm(...)
 }
 
-znorm <- function(seed, n, SE, M0, Z, eps=1e-3) {
+znorm <- function(seed, n, SE, M0, Z, eps = 1e-3) {
   set.seed(seed)
   S <- SE * sqrt(n)
   M <- M0 + Z * SE
   repeat {
-    x <- rnorm(n, mean=M, sd=S)
+    x <- rnorm(n, mean = M, sd = S)
     m <- mean(x)
     se <- sd(x) / sqrt(length(x))
     if(abs(abs(m - M0) - abs(Z * se)) < eps) break
@@ -17,30 +17,30 @@ znorm <- function(seed, n, SE, M0, Z, eps=1e-3) {
 }
 
 
-plot_one_sample <- function(x, m, with.point=FALSE, limits=NULL, point.colour="blue", error.type="SE") {
+plot_one_sample <- function(x, m, with.point = FALSE, limits = NULL, point.colour = "blue", error.type = "SE") {
   df <- tibble(x = x)
   maxx <- ifelse(with.point, 3, 2)
   if(is.null(limits)) {
     limits <- c(0, max(x) * 1.03)
   }
-  g <- ggplot(df, aes(x=1, y=x)) +
+  g <- ggplot(df, aes(x = 1, y = x)) +
     theme_clean +
-    #geom_jitter(width=0.15, height=0) +
-    geom_beeswarm(cex=0.35, size=1.2, priority = "density") +
-    labs(y="Body mass (g)") +
-    scale_x_continuous(limits=c(0, maxx)) +
-    scale_y_continuous(expand=c(0, 0), limits=limits) +
-    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank(), panel.border = element_rect(colour="grey50", fill=NA)) +
-    geom_hline(yintercept = m, colour="blue", linetype="dotted")
+    #geom_jitter(width = 0.15, height = 0) +
+    geom_beeswarm(cex = 0.35, size = 1.2, priority = "density") +
+    labs(y = "Body mass (g)") +
+    scale_x_continuous(limits = c(0, maxx)) +
+    scale_y_continuous(expand = c(0, 0), limits = limits) +
+    theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.line.x = element_blank(), axis.ticks.x = element_blank(), panel.border = element_rect(colour = "grey50", fill = NA)) +
+    geom_hline(yintercept = m, colour = "blue", linetype = "dotted")
   if(with.point) {
     M <- mean(x)
     SE <- sd(x) / sqrt(length(x))
     tc <- qt(0.975, df = length(x) - 1)
-    E <- ifelse(error.type=="SE", SE, tc*SE)
-    pf <- data.frame(x=2, y=M, lo=M-E, up=M+E)
+    E <- ifelse(error.type == "SE", SE, tc*SE)
+    pf <- data.frame(x = 2, y = M, lo = M-E, up = M+E)
     g <- g + 
-      geom_point(data=pf, aes(x, y), colour=point.colour) +
-      geom_errorbar(data=pf, aes(x=x, ymin=lo, ymax=up), width=0.2, colour=point.colour)
+      geom_point(data = pf, aes(x, y), colour = point.colour) +
+      geom_errorbar(data = pf, aes(x = x, ymin = lo, ymax = up), width = 0.2, colour = point.colour)
   }
   g
 }
@@ -61,29 +61,29 @@ plot_t_animation <- function() {
     y = dnorm(x)
   )
   
-  g <- ggplot(tf, aes(x=x, y=y)) +
+  g <- ggplot(tf, aes(x = x, y = y)) +
     theme_clean +
-    geom_line(data=tf1, aes(x=x, y=y, group=dummy), colour="grey80", linewidth=0.5) +
-    geom_line(colour="red", linewidth=2) +
-    geom_line(data=ef, aes(x, y), colour="black", linewidth=1) +
+    geom_line(data = tf1, aes(x = x, y = y, group = dummy), colour = "grey80", linewidth = 0.5) +
+    geom_line(colour = "red", linewidth = 2) +
+    geom_line(data = ef, aes(x, y), colour = "black", linewidth = 1) +
     theme(
-      axis.text = element_text(size=24),
+      axis.text = element_text(size = 24),
       axis.ticks.length = unit(3, "mm"),
-      text = element_text(size=24),
-      plot.title = element_text(size=26)
+      text = element_text(size = 24),
+      plot.title = element_text(size = 26)
     ) +
     transition_manual(dof) +
-    scale_y_continuous(expand=c(0,0), limits=c(0, max(tf$y) * 1.03)) +
-    scale_x_continuous(breaks=seq(-4,4,2), limits=c(-5,5), expand=c(0,0)) +
-    labs(title="d.o.f. = {current_frame}", x="t", y="f(t)")
+    scale_y_continuous(expand = c(0,0), limits = c(0, max(tf$y) * 1.03)) +
+    scale_x_continuous(breaks = seq(-4,4,2), limits = c(-5,5), expand = c(0,0)) +
+    labs(title = "d.o.f. = {current_frame}", x = "t", y = "f(t)")
   
-  animate(g, fps = 20, renderer = gifski_renderer(loop = TRUE), width=600, height=500)
+  animate(g, fps = 20, renderer = gifski_renderer(loop = TRUE), width = 600, height = 500)
 }
 
 
-generate_null_distributions <- function(seed=4826, M=20, S=5, n=5, nsim=1e6) {
+generate_null_distributions <- function(seed = 4826, M = 20, S = 5, n = 5, nsim = 1e6) {
   set.seed(seed)
-  X <- matrix(rnorm(n * nsim, M, S), ncol=n)
+  X <- matrix(rnorm(n * nsim, M, S), ncol = n)
   sN <- sqrt(n)
   
   list(
@@ -99,18 +99,18 @@ generate_null_distributions <- function(seed=4826, M=20, S=5, n=5, nsim=1e6) {
 
 
 plot_t_nulls <- function(d) {
-  g1 <- plot_one_dist(as.vector(d$X), "Body mass (g)", "Original distribution",c(0, 40), dnorm, mean=d$M, sd=d$S)
-  g2 <- plot_one_dist(d$z, "Z", "Distribution of Z", c(-5, 5), dnorm, mean=0, sd=1)
-  g3 <- plot_one_dist(d$m, "Sample mean (g)", "Distribution of M", c(0, 40), dnorm, mean=d$M, sd=d$S/sqrt(d$n))
+  g1 <- plot_one_dist(as.vector(d$X), "Body mass (g)", "Original distribution",c(0, 40), dnorm, mean = d$M, sd = d$S)
+  g2 <- plot_one_dist(d$z, "Z", "Distribution of Z", c(-5, 5), dnorm, mean = 0, sd = 1)
+  g3 <- plot_one_dist(d$m, "Sample mean (g)", "Distribution of M", c(0, 40), dnorm, mean = d$M, sd = d$S/sqrt(d$n))
   
   gt <- tibble(
     x = seq(-5, 5, length.out = 100),
     y = dt(x, d$n-1)
   )
-  g4 <- plot_one_dist(d$t, "t", "Distribution of t", c(-5, 5), dnorm, mean=0, sd=1) +
-    geom_line(data=gt, aes(x, y), size=0.5, colour="blue") 
+  g4 <- plot_one_dist(d$t, "t", "Distribution of t", c(-5, 5), dnorm, mean = 0, sd = 1) +
+    geom_line(data = gt, aes(x, y), linewidth = 0.5, colour = "blue") 
   
-  plot_grid(g1, g2, g3, g4, ncol=2, scale = 0.93)
+  plot_grid(g1, g2, g3, g4, ncol = 2, scale = 0.93)
 }
 
 
@@ -122,28 +122,28 @@ plot_t_with_cuts <- function(smpl) {
   dof <- length(smpl) - 1
   
   list(
-    t_dist = plot_fun(dt, df=dof, x.grid=seq(-5,5,0.01), name="t"),
-    t_dist_cut1 = plot_fun(dt, df=dof, x.grid=seq(-5,5,0.01), cut.up=t.obs, name="t"),
-    t_dist_cut2 = plot_fun(dt, df=dof, x.grid=seq(-5,5,0.01), cut.lo=-t.obs, cut.up=t.obs, name="t")
+    t_dist = plot_fun(dt, df = dof, x.grid = seq(-5,5,0.01), name = "t"),
+    t_dist_cut1 = plot_fun(dt, df = dof, x.grid = seq(-5,5,0.01), cut.up = t.obs, name = "t"),
+    t_dist_cut2 = plot_fun(dt, df = dof, x.grid = seq(-5,5,0.01), cut.lo = -t.obs, cut.up = t.obs, name = "t")
   )
 }
 
 
 
-generate_normality_distributions <- function(seed=4826, M=20, S=5, n=5, nsim=1e6) {
+generate_normality_distributions <- function(seed = 4826, M = 20, S = 5, n = 5, nsim = 1e6) {
   set.seed(seed)
   
   # normal
-  X1 <- matrix(rnorm(n * nsim, M, S), ncol=n)
+  X1 <- matrix(rnorm(n * nsim, M, S), ncol = n)
   
   # bimodal
   X2 <- c(rnorm(n * nsim/2, M - 5, S/2), rnorm(n * nsim/2, M + 5, S/2))
-  X2 <- matrix(sample(X2), ncol=n) # mix both distributions
+  X2 <- matrix(sample(X2), ncol = n) # mix both distributions
   M2 <- mean(X2)
 
   # asymmetric
   X3 <- c(rnorm(n * nsim/4, M - 5, S/2), rnorm(n * 3 * nsim/4, M + 5, S/2))
-  X3 <- matrix(sample(X3), ncol=n) # mix both distributions
+  X3 <- matrix(sample(X3), ncol = n) # mix both distributions
   M3 <- mean(X3)
 
   sN <- sqrt(n)
@@ -165,16 +165,16 @@ generate_normality_distributions <- function(seed=4826, M=20, S=5, n=5, nsim=1e6
 plot_normality_t <- function(d) {
   t.lim <- c(-5, 5)
   
-  g1 <- plot_one_dist(as.vector(d$X1), "Body mass (g)", "", c(0, 40), dnorm, mean=d$M, sd=d$S, maxy=0.085)
-  g2 <- plot_one_dist(d$t1, "t", "", t.lim, dt, df=4)
+  g1 <- plot_one_dist(as.vector(d$X1), "Body mass (g)", "", c(0, 40), dnorm, mean = d$M, sd = d$S, maxy = 0.085)
+  g2 <- plot_one_dist(d$t1, "t", "", t.lim, dt, df = 4)
   
-  g3 <- plot_one_dist(as.vector(d$X2), "Body mass (g)", "", c(0, 40), dnorm, mean=d$M, sd=d$S, maxy=0.085)
-  g4 <- plot_one_dist(d$t2, "t", "", t.lim, dt, df=4, maxy=0.45)
+  g3 <- plot_one_dist(as.vector(d$X2), "Body mass (g)", "", c(0, 40), dnorm, mean = d$M, sd = d$S, maxy = 0.085)
+  g4 <- plot_one_dist(d$t2, "t", "", t.lim, dt, df = 4, maxy = 0.45)
   
-  g5 <- plot_one_dist(as.vector(d$X3), "Body mass (g)", "", c(0, 40), dnorm, mean=d$M, sd=d$S, maxy=0.125)
-  g6 <- plot_one_dist(d$t3, "t", "", t.lim, dt, df=4, maxy=0.45)
+  g5 <- plot_one_dist(as.vector(d$X3), "Body mass (g)", "", c(0, 40), dnorm, mean = d$M, sd = d$S, maxy = 0.125)
+  g6 <- plot_one_dist(d$t3, "t", "", t.lim, dt, df = 4, maxy = 0.45)
   
-  g <- plot_grid(g1, g3, g5, g2, g4, g6, ncol=3, scale=0.95)
+  g <- plot_grid(g1, g3, g5, g2, g4, g6, ncol = 3, scale = 0.95)
   
 }
 
@@ -184,7 +184,7 @@ generate_p5 <- function(seed = 222) {
   done <- FALSE
   while(!done) {
     x5 <- rnorm(5, 25, 5)
-    p <- t.test(x5, mu=20)$p.value
+    p <- t.test(x5, mu = 20)$p.value
     done <- abs(p - 0.05) < 1e-5
   }
   x5
@@ -192,7 +192,7 @@ generate_p5 <- function(seed = 222) {
 
 
 plot_ci_vs_test <- function(smp) {
-  plot_one_sample(smp, 20, limits=c(min(smp)-2, max(smp)+2), with.point=TRUE, error.type="CI") 
+  plot_one_sample(smp, 20, limits = c(min(smp)-2, max(smp)+2), with.point = TRUE, error.type = "CI") 
 }
 
 make_DMT <- function(X1, X2) {
@@ -229,19 +229,19 @@ make_DMT <- function(X1, X2) {
 }
 
 
-generate_two_sample_t_test <- function(seed=22, M=20, S=5, N1=12, N2=9, nsim=1e6) {
+generate_two_sample_t_test <- function(seed = 22, M = 20, S = 5, N1 = 12, N2 = 9, nsim = 1e6) {
   set.seed(seed)
-  X1 <- matrix(rnorm(N1 * nsim, M, S), ncol=N1)
-  X2 <- matrix(rnorm(N2 * nsim, M, S), ncol=N2)
+  X1 <- matrix(rnorm(N1 * nsim, M, S), ncol = N1)
+  X2 <- matrix(rnorm(N2 * nsim, M, S), ncol = N2)
   
   make_DMT(X1, X2) 
 }
 
 
-generate_t_test_variance <- function(seed=22, M=20, S1=5, S2=2.5, N1=12, N2=9, nsim=1e6) {
+generate_t_test_variance <- function(seed = 22, M = 20, S1 = 5, S2 = 2.5, N1 = 12, N2 = 9, nsim = 1e6) {
   set.seed(seed)
-  X1 <- matrix(rnorm(N1 * nsim, M, S1), ncol=N1)
-  X2 <- matrix(rnorm(N2 * nsim, M, S2), ncol=N2)
+  X1 <- matrix(rnorm(N1 * nsim, M, S1), ncol = N1)
+  X2 <- matrix(rnorm(N2 * nsim, M, S2), ncol = N2)
   
   make_DMT(X1, X2)
 }
@@ -256,12 +256,12 @@ plot_t2_null <- function(md) {
 
 
 mice_properties <- function(mice) {
-  English <- mice |> filter(Country=="English") |> pull(Mass)
-  Scottish <- mice |> filter(Country=="Scottish") |> pull(Mass)
-  mice |> group_by(Country) |> summarise(M=mean(Mass), SD=sd(Mass), VAR=var(Mass))
+  English <- mice |> filter(Country == "English") |> pull(Mass)
+  Scottish <- mice |> filter(Country == "Scottish") |> pull(Mass)
+  mice |> group_by(Country) |> summarise(M = mean(Mass), SD = sd(Mass), VAR = var(Mass))
   make_DMT(
-    matrix(English, nrow=1), 
-    matrix(Scottish, nrow=1)
+    matrix(English, nrow = 1), 
+    matrix(Scottish, nrow = 1)
   )
 }
 
@@ -270,8 +270,8 @@ plot_t2_var <- function(mice) {
   mp <- mice_properties(mice)
   
   list(
-    t_eq = plot_fun(dt, df=mp$nu.eq, x.grid=seq(-5,5,0.01), cut.up = -mp$t.eq, name="t"),
-    t_ne = plot_fun(dt, df=mp$nu.ne, x.grid=seq(-5,5,0.01), cut.up = -mp$t.ne, name="t")
+    t_eq = plot_fun(dt, df = mp$nu.eq, x.grid = seq(-5,5,0.01), cut.up = -mp$t.eq, name = "t"),
+    t_ne = plot_fun(dt, df = mp$nu.ne, x.grid = seq(-5,5,0.01), cut.up = -mp$t.ne, name = "t")
   )
 }
 
@@ -279,10 +279,10 @@ plot_t2_var <- function(mice) {
 plot_t2_var_dist <- function(mv) {
   g1 <- plot_one_dist(mv$t.eq, "t", expression(Equal~variance), c(-4, 4), dt, mv$n1 + mv$n2 - 2)
   g2 <- plot_one_dist(mv$t.ne, "t", expression(Unequal~variance), c(-4, 4), dt, mv$n1 + mv$n2 - 2)
-  plot_grid(g1, g2, ncol=1)
+  plot_grid(g1, g2, ncol = 1)
 }
 
-generate_effect_p <- function(n, p, M1=20, S=5, eps=1e-4, max.iter=10000) {
+generate_effect_p <- function(n, p, M1 = 20, S = 5, eps = 1e-4, max.iter = 10000) {
   t <- qt(1 - p, 2 * n - 2)
   SE <- S / sqrt(n)
   dM <- t * SE
@@ -298,7 +298,7 @@ generate_effect_p <- function(n, p, M1=20, S=5, eps=1e-4, max.iter=10000) {
     #cat(paste(i, delta, test$p.value, "\n"))
     if(delta < eps || i > max.iter) break
   }
-  list(x1=x1, x2=x2, p=test$p.value, fc=mean(x2) / mean(x1), dM=mean(x2) - mean(x1))
+  list(x1 = x1, x2 = x2, p = test$p.value, fc = mean(x2) / mean(x1), dM = mean(x2) - mean(x1))
 }
 
 
@@ -309,7 +309,7 @@ mk_mice <- function(dat) {
   )
 }
 
-plot_pval_effect <- function(seed=777) {
+plot_pval_effect <- function(seed = 777) {
   set.seed(seed)
   dat1 <- generate_effect_p(8, 0.02)
   dat2 <- generate_effect_p(100, 0.02)
@@ -319,15 +319,15 @@ plot_pval_effect <- function(seed=777) {
 
   lms <- c(0, 40)
   
-  g1 <- plot_mice_box(mk_mice(dat1), cex=1.2, size=1, limits=lms)
-  g2 <- plot_mice_box(mk_mice(dat2), cex=1.2, size=1, limits=lms)
+  g1 <- plot_mice_box(mk_mice(dat1), cex = 1.2, size = 1, limits = lms)
+  g2 <- plot_mice_box(mk_mice(dat2), cex = 1.2, size = 1, limits = lms)
   
-  plot_grid(g1, g2, ncol=2)
+  plot_grid(g1, g2, ncol = 2)
 }
 
 
 
-gen_sd <- function(n, M, S, eps=1e-3) {
+gen_sd <- function(n, M, S, eps = 1e-3) {
   repeat{
     x <- rnorm(n, 0, S)
     if(abs(sd(x) - S) < eps) break
@@ -336,7 +336,7 @@ gen_sd <- function(n, M, S, eps=1e-3) {
 }
 
 
-generate_overlap_ci <- function(seed = 225, n=8, S=5, M=20) {
+generate_overlap_ci <- function(seed = 225, n = 8, S = 5, M = 20) {
   set.seed(seed)
   x1 <- gen_sd(n, M, S)
   x <- gen_sd(n, M, S)
@@ -346,7 +346,7 @@ generate_overlap_ci <- function(seed = 225, n=8, S=5, M=20) {
   
   # find delta M to give p = 0.05
   err <- function(dm) (t.test(x1, x+dm)$p.value - 0.05)^2
-  opt <- optim(5, err, method = "Brent", lower=0, upper=10)
+  opt <- optim(5, err, method = "Brent", lower = 0, upper = 10)
   x3 <- x + opt$par
   
   list(
@@ -381,12 +381,12 @@ plotCI <- function(x1, x2) {
   g <- ggplot() +
     theme_clean +
     theme(legend.position = "none") +
-    geom_beeswarm(data=d, aes(x=x, y=y, fill=x), shape=21, cex=1.3) +
-    geom_errorbar(data=dm, aes(x=i, ymin=y-s, ymax=y+s), width=0.1, colour="grey50") +
-    #geom_errorbar(data=dm, aes(x=i, ymin=y-s/sqrt(2), ymax=y+s/sqrt(2)), width=0.1) +
-    geom_point(data=dm, (aes(x=i, y=y, fill=x)), shape=22, size=2) +
-    labs(x=NULL, y="Mass (g)", title=paste0("p = ", p)) +
-    scale_fill_manual(values=okabe_ito_palette)
+    geom_beeswarm(data = d, aes(x = x, y = y, fill = x), shape = 21, cex = 1.3) +
+    geom_errorbar(data = dm, aes(x = i, ymin = y-s, ymax = y+s), width = 0.1, colour = "grey50") +
+    #geom_errorbar(data = dm, aes(x = i, ymin = y-s/sqrt(2), ymax = y+s/sqrt(2)), width = 0.1) +
+    geom_point(data = dm, (aes(x = i, y = y, fill = x)), shape = 22, size = 2) +
+    labs(x = NULL, y = "Mass (g)", title = paste0("p = ", p)) +
+    scale_fill_manual(values = okabe_ito_palette)
   g
 }
 
@@ -398,7 +398,7 @@ plot_ci_conf <- function() {
   g1 <- plotCI(d$x1, d$x2)
   g2 <- plotCI(d$x1, d$x3)
   
-  plot_grid(g1, g2, nrow=1)
+  plot_grid(g1, g2, nrow = 1)
 }
 
 
@@ -412,7 +412,10 @@ make_paired_t_data <- function() {
 
 plot_paired_test <- function(pd) {
   x <- pd |> 
-    mutate(sign = as_factor(sign(Before - After)))
+    mutate(
+      dif = After - Before,
+      sign = as_factor(sign(dif))
+    )
   
   m <- pd |> 
     mutate(id = row_number()) |> 
@@ -422,21 +425,34 @@ plot_paired_test <- function(pd) {
   
   g <- ggplot(m, aes(name, value)) +
     theme_clean +
-    labs(x="", y="Body mass (g)") +
+    labs(x = NULL, y = "Body mass (g)") +
     theme(legend.position = "none") +
-    scale_color_manual(values=okabe_ito_palette)
+    scale_color_manual(values = okabe_ito_palette)
+  
+  gd <- ggplot(x, aes(x = 1, y = dif, colour = sign)) +
+    theme_clean +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    ) +
+    geom_hline(yintercept = 0, colour = "blue", linetype = "dotted") +
+    geom_point() +
+    labs(x = NULL, y = "Body mass difference (g)") +
+    theme(legend.position = "none") +
+    scale_color_manual(values = okabe_ito_palette)
   
   list( 
     ttest_unpaired = g + geom_point(),
-    ttest_paired = g + geom_point() + geom_segment(data=x, aes(x="Before", xend="After", y=Before, yend=After, colour=sign)) + geom_point() 
+    ttest_paired = g + geom_point() + geom_segment(data = x, aes(x = "Before", xend = "After", y = Before, yend = After, colour = sign)) + geom_point(),
+    ttest_diff = gd
   )
 }
 
 
-generate_f_null <- function(seed=1966, M=20, S=5, N1=12, N2=9, nsim=1000000) {
+generate_f_null <- function(seed = 1966, M = 20, S = 5, N1 = 12, N2 = 9, nsim = 1000000) {
   set.seed(seed)
-  X1 <- matrix(rnorm(N1 * nsim, M, S), ncol=N1)
-  X2 <- matrix(rnorm(N2 * nsim, M, S), ncol=N2)
+  X1 <- matrix(rnorm(N1 * nsim, M, S), ncol = N1)
+  X2 <- matrix(rnorm(N2 * nsim, M, S), ncol = N2)
   
   sd1 <- apply(X1, 1, sd)
   sd2 <- apply(X2, 1, sd)
@@ -447,7 +463,7 @@ generate_f_null <- function(seed=1966, M=20, S=5, N1=12, N2=9, nsim=1000000) {
 plot_f_tests <- function(d, N1 = 12, N2 = 9) {
   list(
     ftest_distribution = plot_one_dist(d, "F", "", c(0, 6), NULL),
-    ftest_distribution_line = plot_one_dist(d, "F", "", c(0, 6), df, df1=N1-1, df2=N2-1)
+    ftest_distribution_line = plot_one_dist(d, "F", "", c(0, 6), df, df1 = N1-1, df2 = N2-1)
   )
 }
 

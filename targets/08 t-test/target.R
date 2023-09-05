@@ -66,6 +66,7 @@ lecture_08 <- function() {
     figs_paired_t = plot_paired_test(paired),
     s_tpr_1 = gs(figs_paired_t$ttest_unpaired, path08, 2.5, 3.5),
     s_tpr_2 = gs(figs_paired_t$ttest_paired, path08, 2.5, 3.5),
+    s_tpr_3 = gs(figs_paired_t$ttest_diff, path08, 2, 3.5),
     
     # F test
     figs_f_tests = plot_f_tests(F_dist),

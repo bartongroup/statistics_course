@@ -94,7 +94,7 @@ plot_fit_coefficients <- function(d, cf, group_var = "group", value_var = "value
     theme(legend.position = "none") +
     scale_colour_manual(values=c(okabe_ito_palette, "black")) +
     labs(x=NULL, y="Body mass (g)")
-  if(with.mean) g <- g + geom_segment(data=gdat, aes(x=x-dw, xend=x+dw, y=M, yend=M), size=1)
+  if(with.mean) g <- g + geom_segment(data=gdat, aes(x=x-dw, xend=x+dw, y=M, yend=M), linewidth=1)
   if(with.baseline) g <- g + geom_hline(yintercept = cf[1], colour="grey50", linetype="dotted")
   if(with.coef) {
     g <- g +

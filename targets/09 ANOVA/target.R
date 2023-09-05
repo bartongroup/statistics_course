@@ -17,23 +17,23 @@ lecture_09 <- function() {
   )
   
   make_figures <- tar_plan(
-    s_mb_1 = plot_mice_box(mice_1way, cex=0.6) |> gs(path09, 3.2, 3.2, "mice_1way"),
+    s_mb_1 = plot_mice_box(mice_1way, cex = 3) |> gs(path09, 3.2, 3.2, "mice_1way"),
     
     # variance within between
     s_vwb = plot_var_within_between() |> gs(path09, 5.8, 3, "variance_between_within"),
-    s_varw = plot_variance(mice_1way, within=TRUE) |> gs(path09, 3.3, 3, "variance_within"),
-    s_varb = plot_variance(mice_1way, within=FALSE) |> gs(path09, 3.3, 3, "variance_between"),
+    s_varw = plot_variance(mice_1way, within = TRUE) |> gs(path09, 3.3, 3, "variance_within"),
+    s_varb = plot_variance(mice_1way, within = FALSE) |> gs(path09, 3.3, 3, "variance_between"),
     
     # F distribution
     s_fmice = plot_one_dist(F_mice, "F", "", c(0, 6), df, 3, 30) |> gs(path09, 3.5, 3.5, "mice_1way_F"),
     
     # Effect no effect
-    s_ene1 = plot_mice_box(mice_1way, cex=0.6, limits=c(0,40)) |> gs(path09, 3.2, 3.2, "mice_1way_effect"),
-    s_ene2 = plot_mice_box(mice_1way_ne$dat, cex=0.6, limits=c(0,40)) |> gs(path09, 3.2, 3.2, "mice_1way_no_effect"),
+    s_ene1 = plot_mice_box(mice_1way, cex = 3, limits = c(0, 40)) |> gs(path09, 3.2, 3.2, "mice_1way_effect"),
+    s_ene2 = plot_mice_box(mice_1way_ne$dat, cex = 3, limits = c(0, 40)) |> gs(path09, 3.2, 3.2, "mice_1way_no_effect"),
     
     # 2 way
-    s_2ww = plot_mice_box(filter(mice_2way, Colour=="White"), limits=c(0,42), cex=0.6) |> gs(path09, 3.2, 3.2, "mice_white"),
-    s_2wb = plot_mice_box(filter(mice_2way, Colour=="Black"), limits=c(0,42), cex=0.6) |> gs(path09, 3.2, 3.2, "mice_black"),
+    s_2ww = plot_mice_box(filter(mice_2way, Colour == "White"), limits = c(0, 42), cex = 3) |> gs(path09, 3.2, 3.2, "mice_white"),
+    s_2wb = plot_mice_box(filter(mice_2way, Colour == "Black"), limits = c(0, 42), cex = 3) |> gs(path09, 3.2, 3.2, "mice_black"),
     s_a2w = plot_anova_2(mice_2way) |> gs(path09, 6, 3.5, "mice_2way"),
     
     # null hypotheses
@@ -46,7 +46,8 @@ lecture_09 <- function() {
     
     # time course
     s_tc = plot_time_course(time_course) |> gs(path09, 8, 6, "time_course"),
-    s_tca = plot_time_course_area(time_course) |> gs(path09, 4, 3.5, "area_diff")
+    s_tca = plot_time_course_area(time_course) |> gs(path09, 4, 3.5, "area_diff"),
+    tc_t_test = time_course_t_test(time_course)
   )
 
   

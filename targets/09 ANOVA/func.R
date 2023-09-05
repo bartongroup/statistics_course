@@ -328,6 +328,20 @@ plot_time_course <- function(tc) {
 }
 
 
+time_course_t_test <- function(tc) {
+  tc |> 
+    select(Treatment, Time, Mass) |>
+    nest(data = c(Treatment, Mass)) |>
+    mutate(
+      fit = map(data, ~t.test(Mass ~ Treatment, data = .x)),
+      tidied = map(fit, tidy)
+    ) |>
+    unnest(tidied) |> 
+    select(Time, estimate, p_value = p.value) |> 
+    mutate(p_adjust = p.adjust(p_value, method = "BH"))
+}
+
+
 
 area <- function(x, y) {
   n <- length(x)

@@ -82,7 +82,7 @@ plot_body_temperature <- function(body) {
       plot.margin = margin(b=0,r=6,t=10,l=3),
       panel.grid = element_blank()
     ) +
-    geom_histogram(data=body, aes(x=temperature.c, y=..density..), breaks=brks, fill=fill.colour) +
+    geom_histogram(data=body, aes(x=temperature.c, y=after_stat(density)), breaks=brks, fill=fill.colour) +
     geom_outline(body$temperature.c, breaks=brks) +
     geom_line(data=m, aes(x,y), colour="brown3") +
     scale_y_continuous(expand=c(0,0), limits=c(0,1.2), breaks=seq(0.2,1.2,0.2)) +

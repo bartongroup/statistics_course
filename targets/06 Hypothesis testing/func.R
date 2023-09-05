@@ -27,7 +27,7 @@ generate_mouse_delta <- function(seed = 13) {
 plot_mouse_dist <- function(d) {
   brks <- seq(-10, 10, 0.1)
   
-  ggplot(d, aes(x = m, y = ..density..)) +
+  ggplot(d, aes(x = m, y = after_stat(density))) +
     theme_dist +
     scale_x_continuous(expand = c(0,0)) +
     scale_y_continuous(expand = c(0,0)) +

@@ -10,26 +10,26 @@ make_param_nonparam <- function() {
 
 
 
-plot_one_thing <- function(dat, what, with.error=FALSE, width=0) {
+plot_one_thing <- function(dat, what, with.error = FALSE, width = 0) {
   g <- ggplot(dat) +
     theme_clean +
     theme(legend.position = "none") +
-    labs(x="", y=what)
+    labs(x = "", y = what)
   if(with.error) {
     m <- dat |> group_by(Condition) |> summarise(M = mean(!!sym(what)), SE = sd(!!sym(what)) / sqrt(n()))
     g <- g + 
-      geom_errorbar(data=m, aes(x=Condition, ymin=M-SE, ymax=M+SE, colour=Condition), width=0.2) +
-      geom_point(data=m, aes(x=Condition, y=M, colour=Condition), shape=15, size=3) +
-      scale_colour_manual(values=okabe_ito_palette)
+      geom_errorbar(data = m, aes(x = Condition, ymin = M-SE, ymax = M+SE, colour = Condition), width = 0.2) +
+      geom_point(data = m, aes(x = Condition, y = M, colour = Condition), shape = 15, size = 3) +
+      scale_colour_manual(values = okabe_ito_palette)
   }
-  g <- g + geom_jitter(aes_string(x="Condition", y=what), width=width, height=0)
+  g <- g + geom_jitter(aes_string(x = "Condition", y = what), width = width, height = 0)
   g
 }
 
 plot_param_nonparam <- function(dat) {
-  g1 <- plot_one_thing(dat, "Value", with.error = TRUE, width=0)
-  g2 <- plot_one_thing(dat, "Rank") + scale_y_continuous(breaks=1:nrow(dat))
-  plot_grid(g1, g2, ncol=2)
+  g1 <- plot_one_thing(dat, "Value", with.error = TRUE, width = 0)
+  g2 <- plot_one_thing(dat, "Rank") + scale_y_continuous(breaks = 1:nrow(dat))
+  plot_grid(g1, g2, ncol = 2)
 }
 
 countU <- function(x, y) {
@@ -49,14 +49,15 @@ prepare_Udata <- function(x, y, conditions) {
     U = c(ux, uy)
   )
   dat$Rank <- rank(dat$Lifespan)
-  dat$Condition <- factor(dat$Condition, levels=conditions)
+  dat$Condition <- factor(dat$Condition, levels = conditions)
   dat$text.adj <- -1
   dat[dat$Condition == conditions[1], "text.adj"] <- 2
   
   cnnct <- setNames(expand.grid(x, y), conditions)
   cnnct$Colour <- cnnct[, conditions[1]] > cnnct[, conditions[2]]
+  cnnct$Colour <- factor(cnnct$Colour, levels = c(FALSE, TRUE))
   
-  list(dat=dat, cnnct=cnnct)
+  list(dat = dat, cnnct = cnnct)
 }
 
 make_lifespan_data <- function() {
@@ -67,29 +68,30 @@ make_lifespan_data <- function() {
 }
 
 
-plotU <- function(lifespan, sel=NULL, only.points=FALSE) {
+plotU <- function(lifespan, sel = NULL, only.points = FALSE, no.counts = FALSE) {
   dat <- lifespan$dat
   cnnct <- lifespan$cnnct
   
   if(!is.null(sel)) {
     dat.sel <- dat |> 
-      filter(Condition=="WT" & Lifespan==sel)
-    cnnct.sel <- filter(cnnct, WT==sel)
+      filter(Condition == "WT" & Lifespan == sel)
+    cnnct.sel <- filter(cnnct, WT == sel)
   } else {
     dat.sel <- dat
     cnnct.sel <- cnnct
   }
-  dat$Condition <- factor(dat$Condition, levels=c("WT", "KO"))
+  dat$Condition <- factor(dat$Condition, levels = c("WT", "KO"))
   g <- ggplot(dat, aes(Condition, Lifespan)) +
     theme_clean +
     theme(legend.position = "none") +
-    labs(x="", y="Lifespan (day)") +
-    scale_colour_manual(values=okabe_ito_palette) +
+    labs(x = "", y = "Lifespan (day)") +
+    scale_colour_manual(values = okabe_ito_palette, drop = FALSE) +
     geom_point()
   if(!only.points) {
-    g <- g + geom_segment(data=cnnct.sel, aes(x="KO", xend="WT", y=KO, yend=WT, colour=Colour)) +
-      geom_point() +
-      geom_text(data=dat.sel, aes(x=Condition, y=Lifespan, label=U, hjust=text.adj))
+    g <- g + geom_segment(data = cnnct.sel, aes(x = "KO", xend = "WT", y = KO, yend = WT, colour = Colour)) +
+      geom_point()
+    if(!no.counts) 
+      g <- g + geom_text(data = dat.sel, aes(x = Condition, y = Lifespan, label = U, hjust = text.adj))
   }
   g
 }
@@ -123,27 +125,27 @@ make_u_diff <- function(lifespan) {
 
 simple_dat_plot <- function(dat, dm) {
   dat[dat$Condition == "WT", "Lifespan"] <- dat[dat$Condition == "WT", "Lifespan"] - dm
-  ggplot(dat, aes(x=Condition, y=Lifespan)) +
+  ggplot(dat, aes(x = Condition, y = Lifespan)) +
     theme_clean +
     theme(
       legend.position = "none",
       axis.line = element_blank(),
       axis.text = element_blank(),
       axis.ticks = element_blank(),
-      panel.border = element_rect(fill=NA)
+      panel.border = element_rect(fill = NA)
     ) +
     geom_point() +
-    labs(x=NULL, y=NULL)
+    labs(x = NULL, y = NULL)
 }
 
 
 plot_u_range <- function(udiff, lifespan) {
   g <- ggplot(udiff) +
     theme_clean +
-    geom_line(aes(dm, ux), colour="blue", size=0.3) +
-    geom_line(aes(dm, uy), colour="darkgreen", size=0.3) +
-    labs(x="Difference of the means", y="U")
-  gu <- g + geom_line(aes(dm, u), colour="black", size=1)
+    geom_line(aes(dm, ux), colour = "blue", linewidth = 0.3) +
+    geom_line(aes(dm, uy), colour = "darkgreen", linewidth = 0.3) +
+    labs(x = "Difference of the means", y = "U")
+  gu <- g + geom_line(aes(dm, u), colour = "black", linewidth = 1)
   
   g1 <- simple_dat_plot(lifespan$dat, -800)
   g2 <- simple_dat_plot(lifespan$dat, -350)
@@ -158,7 +160,7 @@ plot_u_range <- function(udiff, lifespan) {
   )
 }
 
-generate_udist <- function(seed=253, nx, ny, nsim=100000) {
+generate_udist <- function(seed = 253, nx, ny, nsim = 100000) {
   set.seed(seed)
   map_dbl(1:nsim, function(i) {
     x <- rnorm(nx)
@@ -169,7 +171,7 @@ generate_udist <- function(seed=253, nx, ny, nsim=100000) {
   })
 }
 
-plot_udist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
+plot_udist <- function(U, nx, ny, u.cut = 10, xmax = 45,  ymax = 0.12) {
   Utab <- table(U) / length(U)
   udat <- data.frame(
     U = as.numeric(names(Utab)),
@@ -177,15 +179,15 @@ plot_udist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
   )
   g1 <- ggplot(udat, aes(U, freq)) +
     theme_clean +
-    geom_segment(aes(x=U, xend=U, y=0, yend=freq), colour="grey60") +
+    geom_segment(aes(x = U, xend = U, y = 0, yend = freq), colour = "grey60") +
     geom_point() +
-    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
-    labs(x="U", y="Normalized frequency")
+    scale_y_continuous(limits = c(0, ymax), expand = c(0,0)) +
+    labs(x = "U", y = "Normalized frequency")
   
   if(xmax <= 12) {
-    g1 <- g1 + scale_x_continuous(limits=c(0, xmax), breaks=0:12)
+    g1 <- g1 + scale_x_continuous(limits = c(0, xmax), breaks = 0:12)
   } else {
-    g1 <- g1 + scale_x_continuous(limits=c(0, xmax))
+    g1 <- g1 + scale_x_continuous(limits = c(0, xmax))
   }
   
   M <- nx * ny / 2
@@ -194,10 +196,10 @@ plot_udist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
   x <- seq(0, 50, 0.1)
   gs <- data.frame(
     x = x,
-    y = 2*dnorm(x, mean=M, sd=S)
+    y = 2*dnorm(x, mean = M, sd = S)
   )
   g2 <- g1 +
-    geom_line(data=gs, aes(x, y), colour="red")
+    geom_line(data = gs, aes(x, y), colour = "red")
   g2
   
   xc <- seq(0, u.cut, 0.1)
@@ -206,10 +208,10 @@ plot_udist <- function(U, nx, ny, u.cut=10, xmax=45,  ymax=0.12) {
     y = c(2*dnorm(xc, M, S), 0, 0)
   )
   g3 <- g2 +
-    geom_polygon(data=gc, aes(x, y), colour="red", fill=fill.colour.dark)
+    geom_polygon(data = gc, aes(x, y), colour = "red", fill = fill.colour.dark)
   g3
   
-  list(udist=g1, udist_norm=g2, udist_cut=g3)
+  list(udist = g1, udist_norm = g2, udist_cut = g3)
 }
 
 plot_udist_small_example <- function() {
@@ -218,39 +220,74 @@ plot_udist_small_example <- function() {
 }
 
 plot_lifespan_param_rank <- function(lifespan) {
-  g1 <- plot_one_thing(lifespan$dat, what="Lifespan", with.error = TRUE)
-  g2 <- plot_one_thing(lifespan$dat, what="Rank") + scale_y_continuous(breaks=1:13)
+  g1 <- plot_one_thing(lifespan$dat, what = "Lifespan", with.error = TRUE)
+  g2 <- plot_one_thing(lifespan$dat, what = "Rank") + scale_y_continuous(breaks = 1:13)
   
-  plot_grid(g1, g2, ncol=2)
+  plot_grid(g1, g2, ncol = 2)
+}
+
+
+plot_udist_small_all <- function(dat = c(100, 200, 300, 400, 500, 600)) {
+  x <- combn(dat, 3)
+  n <- ncol(x)
+  y <- x[, n:1]
+  conds <- c("WT", "KO")
+  lab_y <- max(dat)
+  M <- map(1:n, function(i) {
+    udat <- prepare_Udata(x[, i], y[, i], conds)
+    Ux <- udat$dat |> filter(Condition == conds[1]) |> pull(U) |> sum()
+    Uy <- udat$dat |> filter(Condition == conds[2]) |> pull(U) |> sum()
+    U <- min(c(Ux, Uy))
+    tb <- tibble(
+      Condition = conds,
+      U = c(Ux, Uy),
+      Lifespan = c(lab_y, lab_y)
+    )
+    tbu <- tibble(
+      Condition = 1.5,
+      U = U,
+      Lifespan = lab_y
+    )
+    plotU(udat, no.counts = TRUE) +
+      theme(
+        axis.text = element_blank(),
+        axis.ticks = element_blank()
+      ) +
+      labs(x = NULL, y = NULL) +
+      geom_text(data = tb, aes(label = U), vjust = -1, size = 5) +
+      geom_text(data = tbu, aes(label = U), vjust = -0.8, size = 6, colour = "red") +
+      ylim(NA, lab_y + 180)
+  }) 
+  plot_grid(plotlist = M)
 }
 
 
 read_scores <- function() {
   s1 <- read_tsv("data/velos1_peptides_info.txt", n_max = 100)
   s2 <- read_tsv("data/velos3_peptides_info.txt", n_max = 100)
-  full_join(s1, s2, by="Sequence") |> 
+  full_join(s1, s2, by = "Sequence") |> 
     select(Sequence, S1 = Score.x, S2 = Score.y) |> 
     pivot_longer(-Sequence)
 }
 
 
 plot_mw_scores <- function(scores) {
-  g1 <- ggplot(scores, aes(x=value, y=name, fill=name)) +
+  g1 <- ggplot(scores, aes(x = value, y = name, fill = name)) +
     theme_classic() +
-    geom_density_ridges(stat="binline", bins=20, scale=0.8) +
-    scale_fill_manual(values=okabe_ito_palette) +
-    labs(x="Score", y=NULL) +
+    geom_density_ridges(stat = "binline", bins = 20, scale = 0.8) +
+    scale_fill_manual(values = okabe_ito_palette) +
+    labs(x = "Score", y = NULL) +
     theme(legend.position = "none") 
-  g2 <- ggplot(scores, aes(x=name, y=value)) +
+  g2 <- ggplot(scores, aes(x = name, y = value)) +
     theme_classic() +
-    geom_boxplot(aes(fill=name), outlier.shape = NA) +
-    #geom_jitter(width=0.1, height=0, size=0.5) +
-    geom_beeswarm(cex=1, size=1, priority="density") +
-    scale_fill_manual(values=okabe_ito_palette) +
+    geom_boxplot(aes(fill = name), outlier.shape = NA) +
+    #geom_jitter(width = 0.1, height = 0, size = 0.5) +
+    geom_beeswarm(cex = 1, size = 1, priority = "density") +
+    scale_fill_manual(values = okabe_ito_palette) +
     theme(legend.position = "none") +
-    labs(x="", y="Score")
+    labs(x = "", y = "Score")
   
-  plot_grid(g2, g1, nrow=1, scale=0.8)
+  plot_grid(g2, g1, nrow = 1, scale = 0.8)
 }
 
 make_apgar_scores <- function() {
@@ -265,15 +302,15 @@ make_apgar_scores <- function() {
 }
 
 plot_apgar_scores <- function(d) {
-  ggplot(d, aes(x=sample, y=score, fill=sample)) +
+  ggplot(d, aes(x = sample, y = score, fill = sample)) +
     theme_clean +
     theme(
       legend.position = "none"
     ) +
-    geom_beeswarm(cex=0.6, size=2, shape=21) +
+    geom_beeswarm(cex = 0.6, size = 2, shape = 21) +
     scale_fill_manual(values = okabe_ito_palette) +
-    scale_y_continuous(breaks=0:10, limits=c(0,10.5), expand=c(0,0)) +
-    labs(x=NULL, y="Score")
+    scale_y_continuous(breaks = 0:10, limits = c(0,10.5), expand = c(0,0)) +
+    labs(x = NULL, y = "Score")
 }
 
 
@@ -287,7 +324,7 @@ make_before_after <- function() {
 }
 
 
-plot_paired <- function(d, simple=FALSE) {
+plot_paired <- function(d, simple = FALSE) {
   m <- d |> 
     pivot_longer(c(Before, After)) |> 
     mutate(name = as_factor(name) |> fct_relevel("Before"))
@@ -295,22 +332,22 @@ plot_paired <- function(d, simple=FALSE) {
   laby <- ifelse(simple, "", "Body mass (g)")
   g <- ggplot(m, aes(name, value)) +
     theme_clean +
-    labs(x=NULL, y=laby) +
+    labs(x = NULL, y = laby) +
     geom_point() +
-    geom_segment(data=d, aes(x="Before", xend="After", y=Before, yend=After, colour=sgn)) +
+    geom_segment(data = d, aes(x = "Before", xend = "After", y = Before, yend = After, colour = sgn)) +
     geom_point() +
     theme(legend.position = "none") +
-    scale_color_manual(breaks=c(-1,1), values=okabe_ito_palette, drop=FALSE)
+    scale_color_manual(breaks = c(-1,1), values = okabe_ito_palette, drop = FALSE)
   if(simple) {
     g <- g +
-      scale_y_continuous(expand=c(0,2)) +
-      scale_x_discrete(expand=c(0,0.3)) +
+      scale_y_continuous(expand = c(0,2)) +
+      scale_x_discrete(expand = c(0,0.3)) +
       theme(
         legend.position = "none",
         axis.line = element_blank(),
         axis.text = element_blank(),
         axis.ticks = element_blank(),
-        panel.border = element_rect(fill=NA)
+        panel.border = element_rect(fill = NA)
       )
   }
   g
@@ -355,16 +392,16 @@ plot_w_range <- function(d) {
   m0 <- mean(d$After) - mean(d$Before)
   
   g <- ggplot(wdat, aes(dm, W)) +
-    geom_vline(xintercept = 0, colour="grey60") +
-    geom_hline(yintercept = 0, colour="grey60") +
-    geom_line(colour="blue") +
+    geom_vline(xintercept = 0, colour = "grey60") +
+    geom_hline(yintercept = 0, colour = "grey60") +
+    geom_line(colour = "blue") +
     theme_clean +
-    scale_y_continuous(breaks=c(-30,-20,-10,0,10,20,30)) +
-    labs(x="Difference between the means", y="W")
+    scale_y_continuous(breaks = c(-30,-20,-10,0,10,20,30)) +
+    labs(x = "Difference between the means", y = "W")
 
-  g1 <- plot_paired(d |> mutate(After = After - m0 - 1), simple=TRUE)
-  g2 <- plot_paired(d |> mutate(After = After - m0) , simple=TRUE)
-  g3 <- plot_paired(d |> mutate(After = After - m0 + 1), simple=TRUE)
+  g1 <- plot_paired(d |> mutate(After = After - m0 - 1), simple = TRUE)
+  g2 <- plot_paired(d |> mutate(After = After - m0) , simple = TRUE)
+  g3 <- plot_paired(d |> mutate(After = After - m0 + 1), simple = TRUE)
 
   list(
     W_plot = g,
@@ -375,7 +412,7 @@ plot_w_range <- function(d) {
 }
 
 
-generate_wdist <- function(seed=123, nx, nsim=100000) {
+generate_wdist <- function(seed = 123, nx, nsim = 100000) {
   set.seed(seed)
   map_dbl(1:nsim, function(i) {
     tibble(
@@ -387,7 +424,7 @@ generate_wdist <- function(seed=123, nx, nsim=100000) {
 }
 
 
-plot_wdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
+plot_wdist <- function(W, n, w.cut = 30, xmax = 50,  ymax = 0.06) {
   Wtab <- table(W) / length(W)
   wdat <- data.frame(
     W = as.numeric(names(Wtab)),
@@ -395,11 +432,11 @@ plot_wdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
   )
   g1 <- ggplot(wdat, aes(W, freq)) +
     theme_clean +
-    geom_segment(aes(x=W, xend=W, y=0, yend=freq), colour="grey60") +
+    geom_segment(aes(x = W, xend = W, y = 0, yend = freq), colour = "grey60") +
     geom_point() +
-    scale_x_continuous(limits=c(-xmax, xmax), breaks=c(-40, -30,-20,-10,0,10,20,30, 40)) +
-    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
-    labs(x="W", y="Normalized frequency")
+    scale_x_continuous(limits = c(-xmax, xmax), breaks = c(-40, -30,-20,-10,0,10,20,30, 40)) +
+    scale_y_continuous(limits = c(0, ymax), expand = c(0,0)) +
+    labs(x = "W", y = "Normalized frequency")
   
   M <- 0
   S <- sqrt(n * (n + 1) * (2*n + 1) / 6)
@@ -407,10 +444,10 @@ plot_wdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
   x <- seq(-50, 50, 0.1)
   gs <- data.frame(
     x = x,
-    y = 2*dnorm(x, mean=M, sd=S)
+    y = 2*dnorm(x, mean = M, sd = S)
   )
   g2 <- g1 +
-    geom_line(data=gs, aes(x, y), colour="red")
+    geom_line(data = gs, aes(x, y), colour = "red")
   g2
   
   xc1 <- seq(-50, -w.cut, 0.1)
@@ -425,19 +462,19 @@ plot_wdist <- function(W, n, w.cut=30, xmax=50,  ymax=0.06) {
     y = c(0, 2*dnorm(xc2, M, S), 0)
   )
   g3 <- g2 +
-    geom_polygon(data=gc1, aes(x, y), colour="red", fill=fill.colour.dark) +
-    geom_polygon(data=gc2, aes(x, y), colour="red", fill=fill.colour.dark)
+    geom_polygon(data = gc1, aes(x, y), colour = "red", fill = fill.colour.dark) +
+    geom_polygon(data = gc2, aes(x, y), colour = "red", fill = fill.colour.dark)
   g3
   
-  list(w_dist=g1, w_dist_norm=g2, w_dist_norm_cut=g3)
+  list(w_dist = g1, w_dist_norm = g2, w_dist_norm_cut = g3)
 }
 
 
 read_mice_lifespan <- function(file) {
   read_tsv(file) |> 
     mutate(
-      Rank = rank(Lifespan, ties.method="average"),
-      Country = factor(Country, levels=COUNTRIES)
+      Rank = rank(Lifespan, ties.method = "average"),
+      Country = factor(Country, levels = COUNTRIES)
     )
 } 
 
@@ -449,33 +486,33 @@ plot_rank <- function(mice) {
   labsi <- c(1, seq(5,40,5))
   labs <- rep("", 40)
   labs[labsi] <- labsi
-  ggplot(m, aes(x=Rank, y=idx, fill=Country, shape=Country)) +
+  ggplot(m, aes(x = Rank, y = idx, fill = Country, shape = Country)) +
     theme_classic() +
-    geom_point(size=3) +
+    geom_point(size = 3) +
     theme(
       axis.line.y = element_blank(),
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
       legend.position = "none"
     ) +
-    scale_fill_manual(values=british.palette) +
-    scale_x_continuous(breaks=1:40, labels=labs, limits=c(0.5, max(mice$Rank)+0.5), expand=c(0,0)) +
-    scale_shape_manual(values=21:24) +
-    labs(x = "Rank", y="")
+    scale_fill_manual(values = british.palette) +
+    scale_x_continuous(breaks = 1:40, labels = labs, limits = c(0.5, max(mice$Rank)+0.5), expand = c(0,0)) +
+    scale_shape_manual(values = 21:24) +
+    labs(x = "Rank", y = "")
 }
 
 reduce_mice <- function(mice4) {
   mice4 |> 
     filter(Country %in% c("English", "Scottish")) |> 
-    mutate(Rank = rank(Lifespan, ties.method="random"))
+    mutate(Rank = rank(Lifespan, ties.method = "random"))
 }
 
 plot_value_rank <- function(mice4) {
   mice2 <- reduce_mice(mice4)
-  g1 <- plot_mice_box(mice2, cex=3.2, size=2, what="Lifespan", ylab="Lifespan (days)", with.shape=TRUE)
-  g2 <- plot_mice_box(mice2, size=2, what="Rank", ylab="Rank", with.shape=TRUE) +
-    scale_y_continuous(expand=c(0,0), limits=c(0,nrow(mice2)+1), breaks=1:nrow(mice2))
-  plot_grid(g1, g2, ncol=2) 
+  g1 <- plot_mice_box(mice2, cex = 5, size = 2, what = "Lifespan", ylab = "Lifespan (days)", with.shape = TRUE)
+  g2 <- plot_mice_box(mice2, size = 2, what = "Rank", ylab = "Rank", with.shape = TRUE) +
+    scale_y_continuous(expand = c(0,0), limits = c(0,nrow(mice2)+1), breaks = 1:nrow(mice2))
+  plot_grid(g1, g2, ncol = 2) 
   
 }
 
@@ -484,15 +521,15 @@ plot_anova_kruskal <- function(mice4) {
   labs <- rep("", 40)
   labs[labsi] <- labsi
   
-  g1 <- plot_mice_box(mice4, what="Lifespan", ylab="Lifespan (days)", cex=2, with.shape=TRUE)
-  g2 <- plot_mice_box(mice4, what="Rank", ylab="Rank", cex=1.5, with.shape=TRUE) +
-    scale_y_continuous(breaks=1:40, labels=labs)
+  g1 <- plot_mice_box(mice4, what = "Lifespan", ylab = "Lifespan (days)", cex = 3, with.shape = TRUE)
+  g2 <- plot_mice_box(mice4, what = "Rank", ylab = "Rank", cex = 2.5, with.shape = TRUE) +
+    scale_y_continuous(breaks = 1:40, labels = labs)
   
-  plot_grid(g1, g2, ncol=2)
+  plot_grid(g1, g2, ncol = 2)
 }
 
 
-generate_hdist <- function(seed=153, n=c(12, 9, 8, 5), nsim=1000) {
+generate_hdist <- function(seed = 153, n = c(12, 9, 8, 5), nsim = 1000) {
   set.seed(seed)
   map_dbl(1:nsim, function(i) {
     d <- map_dfr(1:length(n), function(k) {
@@ -501,13 +538,13 @@ generate_hdist <- function(seed=153, n=c(12, 9, 8, 5), nsim=1000) {
         Lifespan = rnorm(n[k])
       )
     })
-    kt <- kruskal.test(Lifespan ~ Country, data=d)
+    kt <- kruskal.test(Lifespan ~ Country, data = d)
     as.numeric(kt$statistic)
   })
 }
 
 plot_hdist_cut <- function(hd, mice) {
-  kt.chi2 <- as.numeric(kruskal.test(Lifespan ~ Country, data=mice)$statistic)
+  kt.chi2 <- as.numeric(kruskal.test(Lifespan ~ Country, data = mice)$statistic)
   xx <- seq(kt.chi2, 20, 0.1)
   df <- tibble(
     x = c(kt.chi2, xx, 20),
@@ -515,22 +552,22 @@ plot_hdist_cut <- function(hd, mice) {
   )
   
   xx <- seq(0,20, 0.02)
-  mod <- tibble(x=xx, y=dchisq(xx, 3))
+  mod <- tibble(x = xx, y = dchisq(xx, 3))
   
-  hdat <- tibble(H=hd)
-  g <- ggplot(hdat, aes(x=H, y=..density..)) +
+  hdat <- tibble(H = hd)
+  g <- ggplot(hdat, aes(x = H, y = after_stat(density))) +
     theme_dist +
-    geom_histogram(bins=100, fill=fill.colour.mid) +
-    labs(x=expression(H), y="Density") +
-    scale_x_continuous(limits=c(0, 20), expand=c(0,0)) +
-    scale_y_continuous(expand=c(0,0)) +
-    geom_line(data=mod, aes(x, y)) +
-    geom_polygon(data=df, aes(x, y), colour="blue", fill=fill.colour.dark)
+    geom_histogram(bins = 100, fill = fill.colour.mid) +
+    labs(x = expression(H), y = "Density") +
+    scale_x_continuous(limits = c(0, 20), expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_line(data = mod, aes(x, y)) +
+    geom_polygon(data = df, aes(x, y), colour = "blue", fill = fill.colour.dark)
   g
 }
 
 
-QKS <- function(lambda, eps1=0.0001, eps2=1e-12) {
+QKS <- function(lambda, eps1 = 0.0001, eps2 = 1e-12) {
   a2 <- -2 * lambda^2
   fac <- 2
   probks <- 0
@@ -566,7 +603,7 @@ kolmogorov_dist <- function(x, n1, n2) {
 
 
 
-plot_cumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmargin=0.1, ymargin=0.05, palette=british.palette) {
+plot_cumsum <- function(dat, vars, what = "Lifespan", xlab = "Lifespan (days)", xmargin = 0.1, ymargin = 0.05, palette = british.palette) {
   mn <- min(dat[, what])
   mx <- max(dat[, what])
   delta <- mx - mn
@@ -578,24 +615,24 @@ plot_cumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmar
     filter(Country %in% vars) |>
     group_by(Country) |>
     arrange(value) |> 
-    mutate(idx = row_number(Country), c=1) |> 
+    mutate(idx = row_number(Country), c = 1) |> 
     mutate(cumdist = cumsum(c) / n()) |> 
     mutate(Group = as.integer(Country))  |> 
     mutate(y = -ymargin * Group) |>
     as.data.frame()
   dat2 <- dat |> 
-    add_row(Country=vars, value=mn, cumdist=0) |>
-    add_row(Country=vars, value=mx, cumdist=1) |>
+    add_row(Country = vars, value = mn, cumdist = 0) |>
+    add_row(Country = vars, value = mx, cumdist = 1) |>
     arrange(value, cumdist)
   
-  g <- ggplot(dat2, aes(x=value, y=cumdist, colour=Country)) +
+  g <- ggplot(dat2, aes(x = value, y = cumdist, colour = Country)) +
     theme_clean +
-    geom_hline(yintercept = 0, colour="grey70") +
+    geom_hline(yintercept = 0, colour = "grey70") +
     geom_step() +
-    scale_colour_manual(values=palette) +
-    geom_point(data=dat, aes(x=value, y=y, colour=Country), shape=3, size=2) +
-    scale_y_continuous(breaks=seq(0, 1, 0.2)) +
-    labs(x=xlab, y="Cumulative distribution") +
+    scale_colour_manual(values = palette) +
+    geom_point(data = dat, aes(x = value, y = y, colour = Country), shape = 3, size = 2) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+    labs(x = xlab, y = "Cumulative distribution") +
     theme(legend.position = "none")
   g
 }
@@ -603,16 +640,17 @@ plot_cumsum <- function(dat, vars, what="Lifespan", xlab="Lifespan (days)", xmar
 
 plot_ks_2 <- function(mice4, countries) {
   mice2 <- mice4 |> 
-    filter(Country %in% countries)
+    filter(Country %in% countries) |> 
+    droplevels()
   m <- mice2 |>
     group_split(Country) |> 
     map(function(w) pull(w, Lifespan))
 
   test <- ks.test(m[[1]], m[[2]])
   
-  g1 <- plot_mice_box(mice2, what="Lifespan", ylab="Lifespan (days)", cex=2, size=1.8)
-  g2 <- plot_cumsum(mice2, vars=countries)
-  g <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+  g1 <- plot_mice_box(mice2, what = "Lifespan", ylab = "Lifespan (days)", cex = 3, size = 1.8)
+  g2 <- plot_cumsum(mice2, vars = countries)
+  g <- plot_grid(g1, g2, ncol = 2, rel_widths = c(1, 1.4))
   list(
     plot = g,
     test = test
@@ -620,7 +658,7 @@ plot_ks_2 <- function(mice4, countries) {
 } 
 
 
-generate_mice_lifespan <- function(nx, ny, what="Lifespan", Mx=500, My=500, Sx=50, Sy=50, countries=c("English", "Scottish")) {
+generate_mice_lifespan <- function(nx, ny, what = "Lifespan", Mx = 500, My = 500, Sx = 50, Sy = 50, countries = c("English", "Scottish")) {
   x <- rnorm(nx, Mx, Sx)
   y <- rnorm(ny, My, Sy)
   d <- tibble(
@@ -628,16 +666,16 @@ generate_mice_lifespan <- function(nx, ny, what="Lifespan", Mx=500, My=500, Sx=5
     Country = c(rep(countries[1], nx), rep(countries[2], ny))
   )
   colnames(d)[1] <- what
-  d$Country <- factor(d$Country, levels=countries)
+  d$Country <- factor(d$Country, levels = countries)
   d
 }
 
 
-generate_ddist <- function(seed=23, nx, ny, nsim=100000) {
+generate_ddist <- function(seed = 23, nx, ny, nsim = 100000) {
   set.seed(seed)
   map_dbl(1:nsim, function(i) {
     m <- generate_mice_lifespan(nx, ny)
-    kt <- ks.test(m[m$Country=="English", ]$Lifespan, m[m$Country=="Scottish", ]$Lifespan)
+    kt <- ks.test(m[m$Country == "English", ]$Lifespan, m[m$Country == "Scottish", ]$Lifespan)
     as.numeric(kt$statistic)
   })
 }
@@ -657,7 +695,7 @@ dks <- function(x, n) {
 }
 
 
-plot_Ddist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
+plot_Ddist <- function(D, nx, ny, d.cut = 0.42, ymax = 5) {
   Dtab <- table(D) / length(D)
   ddat <- data.frame(
     D = as.numeric(names(Dtab)),
@@ -668,11 +706,11 @@ plot_Ddist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
   
   g1 <- ggplot(ddat, aes(D, freq)) +
     theme_dist +
-    geom_segment(aes(x=D, xend=D, y=0, yend=freq), colour="grey60") +
+    geom_segment(aes(x = D, xend = D, y = 0, yend = freq), colour = "grey60") +
     geom_point() +
-    scale_x_continuous(limits=c(0, 1)) +
-    scale_y_continuous(limits=c(0, ymax), expand=c(0,0)) +
-    labs(x="D", y="Normalized frequency")
+    scale_x_continuous(limits = c(0, 1)) +
+    scale_y_continuous(limits = c(0, ymax), expand = c(0,0)) +
+    labs(x = "D", y = "Normalized frequency")
   
   ne <- nx * ny / (nx + ny)
   
@@ -680,7 +718,7 @@ plot_Ddist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
   gs <- kolmogorov_dist(seq(0, 1, 0.001), nx, ny)
   
   g2 <- g1 +
-    geom_line(data=gs, aes(x, f), colour="red")
+    geom_line(data = gs, aes(x, f), colour = "red")
   g2
   
   ff <- kolmogorov_dist(seq(d.cut, 1, 0.001), nx, ny)
@@ -689,27 +727,27 @@ plot_Ddist <- function(D, nx, ny, d.cut=0.42, ymax=5) {
     y = c(0, ff$f, 0)
   )
   g3 <- g2 +
-    geom_polygon(data=gc, aes(x, y), colour="red", fill=fill.colour.dark)
+    geom_polygon(data = gc, aes(x, y), colour = "red", fill = fill.colour.dark)
   g3
   
-  list(ks_dist=g1, ks_dist_d=g2, ks_dist_d_cut=g3)
+  list(ks_dist = g1, ks_dist_d = g2, ks_dist_d_cut = g3)
 }
 
-plot_ks_loc_shape <- function(seed1=747, seed2=700) {
+plot_ks_loc_shape <- function(seed1 = 747, seed2 = 700) {
   set.seed(seed1)
   countries <- c("CTRL", "TREAT")
-  ls.gen <- generate_mice_lifespan(12, 12, Mx=100, My=110, Sx=10, Sy=10, what="Value", countries=countries)
-  test1 <- ks.test(ls.gen[ls.gen$Country==countries[1], ]$Value, ls.gen[ls.gen$Country==countries[2], ]$Value) 
-  g1 <- plot_mice_box(ls.gen, what="Value", ylab="Value", palette=okabe_ito_palette, cex=2.8, size=1.8)
-  g2 <- plot_cumsum(ls.gen, vars=countries, what="Value", xlab="Value", palette = okabe_ito_palette)
-  pl1 <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+  ls.gen <- generate_mice_lifespan(12, 12, Mx = 100, My = 110, Sx = 10, Sy = 10, what = "Value", countries = countries)
+  test1 <- ks.test(ls.gen[ls.gen$Country == countries[1], ]$Value, ls.gen[ls.gen$Country == countries[2], ]$Value) 
+  g1 <- plot_mice_box(ls.gen, what = "Value", ylab = "Value", palette = okabe_ito_palette, cex = 2.8, size = 1.8)
+  g2 <- plot_cumsum(ls.gen, vars = countries, what = "Value", xlab = "Value", palette = okabe_ito_palette)
+  pl1 <- plot_grid(g1, g2, ncol = 2, rel_widths = c(1, 1.4))
   
   set.seed(seed2)
-  ls.gen2 <- generate_mice_lifespan(16, 16, what="Value", Mx=100, My=100, Sx=2, Sy=10, countries=countries)
-  test2 <- ks.test(ls.gen2[ls.gen2$Country==countries[1], ]$Value, ls.gen2[ls.gen2$Country==countries[2], ]$Value)
-  g1 <- plot_mice_box(ls.gen2, what="Value", ylab="Value", palette=okabe_ito_palette, cex=2.8, size=1.8)
-  g2 <- plot_cumsum(ls.gen2, vars=countries, what="Value", xlab="Value", palette = okabe_ito_palette)
-  pl2 <- plot_grid(g1, g2, ncol=2, rel_widths = c(1, 1.4))
+  ls.gen2 <- generate_mice_lifespan(16, 16, what = "Value", Mx = 100, My = 100, Sx = 2, Sy = 10, countries = countries)
+  test2 <- ks.test(ls.gen2[ls.gen2$Country == countries[1], ]$Value, ls.gen2[ls.gen2$Country == countries[2], ]$Value)
+  g1 <- plot_mice_box(ls.gen2, what = "Value", ylab = "Value", palette = okabe_ito_palette, cex = 2.8, size = 1.8)
+  g2 <- plot_cumsum(ls.gen2, vars = countries, what = "Value", xlab = "Value", palette = okabe_ito_palette)
+  pl2 <- plot_grid(g1, g2, ncol = 2, rel_widths = c(1, 1.4))
   
   list(
     ks_location = pl1,
