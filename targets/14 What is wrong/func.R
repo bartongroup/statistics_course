@@ -74,7 +74,7 @@ plot_mix_p <- function(p, x.lim=c(0, 1), bins=0.01, alpha=0.8, ymax=5, x.breaks=
     scale_fill_manual(values = ef_palette[2:1]) +
     scale_x_continuous(breaks=x.breaks, expand=c(0,0)) +
     coord_cartesian(xlim=x.lim) +
-    geom_histogram(data=p, aes(x=p, y=..count../(sum(..count..) * bins), fill=hyp), breaks=brks, position="stack") +
+    geom_histogram(data=p, aes(x=p, y=after_stat(count)/(sum(after_stat(count)) * bins), fill=hyp), breaks=brks, position="stack") +
     geom_outline(p$p, brks, colour="grey40", alpha=alpha)
 }
 

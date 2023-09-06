@@ -244,7 +244,8 @@ plot_fdr_distribution <- function(fdr) {
     geom_histogram(aes(x = fdr, y = after_stat(density)), fill = fill.colour.mid, breaks = brks) +
     scale_x_continuous() +
     scale_y_continuous(expand = c(0,0), limits = c(0, 80)) +
-    geom_outline(fdr, brks)
+    geom_outline(fdr, brks) +
+    labs(x = "FDR")
 }
 
 plot_simple_p_dist <- function(dat, ymax = 5, plim = 0.5, bin.size = 0.02) {
@@ -255,9 +256,9 @@ plot_simple_p_dist <- function(dat, ymax = 5, plim = 0.5, bin.size = 0.02) {
   y0 <- mean(y[x > plim])
   ggplot(dat) +
     theme_clean +
-    #geom_histogram(aes(x = p.value, fill = Hypothesis), breaks = brks, position = "stack") +
-    geom_histogram(aes(x = p_value, y = (..count..) / (n * bin.size), fill = hypothesis), breaks = brks) +
+    geom_histogram(aes(x = p_value, y = (after_stat(count)) / (n * bin.size), fill = hypothesis, colour = hypothesis), breaks = brks) +
     scale_fill_manual(values = c(fill.colour.dark, fill.colour.mid), drop = FALSE) +
+    scale_colour_manual(values = c(fill.colour.dark, fill.colour.mid), drop = FALSE) +
     scale_y_continuous(expand = c(0,0), limits = c(0,ymax)) +
     scale_x_continuous(expand = c(0,0), limits = c(0,1), breaks = seq(0,1,0.2)) +
     labs(x = "p-value", y = "density") +
@@ -277,12 +278,40 @@ plot_p_distributions <- function(seed = 225) {
   )
   palt_one <- palt |> 
     mutate(hypothesis = factor(rep("0", 10000), levels = c("1", "0")))
+  
+  # nasty, adding TP and FP colours
+  p_cut <- 0.1
+  bin_size <- 0.02
+  brks <- seq(0, p_cut, bin_size)
+  palt_1 <- palt |> filter(p_value < p_cut)
+  n <- nrow(palt)
+  x <- seq(0, 1, bin_size)[-1] - bin_size
+  y <- as.numeric(table(cut(palt$p_value, seq(0, 1, bin_size), right = TRUE))) / (bin_size * length(palt$p_value))
+  y0 <- mean(y[x > 0.5])
+  p_fp <- tibble(
+    x = c(0, p_cut, p_cut, 0, 0),
+    y = c(0, 0, y0, y0, 0)
+  )
+  p_dist_alt_p <- plot_simple_p_dist(palt, 3.5) +
+    geom_histogram(
+      data = palt_1,
+      aes(x = p_value, y = after_stat(count) / (n * bin_size)),
+      breaks = brks, fill = "deepskyblue2", colour = "deepskyblue2"
+    ) +
+    geom_outline(palt$p_value, seq(0, 1, bin_size)) +
+    geom_polygon(
+      data = p_fp,
+      aes(x = x, y = y),
+      fill = "brown1",
+      colour = "black"
+    )
 
   list(
     p_dist_null = plot_simple_p_dist(pnull, 2),
     p_dist_alt = plot_simple_p_dist(palt, 3.5),
     p_dist_bad = plot_simple_p_dist(pbad, 3.5),
-    p_dist_alt_one = plot_simple_p_dist(palt_one, 3.5)
+    p_dist_alt_one = plot_simple_p_dist(palt_one, 3.5),
+    p_dist_alt_p = p_dist_alt_p
   )  
 }
 
@@ -318,10 +347,14 @@ plot_storey <- function(pd) {
   g2 <- plot_pq(pd, c(0, 0.004), x.brks = seq(0,0.01, 0.002), y.brks = seq(0,0.1,0.05)) +
     labs(x = NULL, y = NULL)
   
+  qobj <- qvalue(pd$p_value)
+  pl <- hist(qobj)
+  
   list(
     pq_bh = g0,
     pq = g1,
-    pq_small = g2
+    pq_small = g2,
+    pq_hist = pl
   )
   
 }

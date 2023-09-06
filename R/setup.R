@@ -39,8 +39,20 @@ gs <- function(pl, prefix, width, height, nm = NULL, dpi = 300, dev = "png") {
   if(!dir.exists(prefix)) dir.create(prefix, recursive = TRUE)
   
   if(is.null(nm)) nm <- deparse(substitute(pl)) |> str_remove("^fig_") |> str_remove("^.+\\$")
-  file <- file.path(prefix, glue("{nm}.{dev}"))
+  file <- file.path(prefix, str_glue("{nm}.{dev}"))
   ggsave(file, pl, device = dev, width=width, height=height, dpi=dpi)
+}
+
+
+gpl <- function(pl, prefix, width, height, nm = NULL) {
+  if(!dir.exists(prefix)) dir.create(prefix, recursive = TRUE)
+  
+  if(is.null(nm)) nm <- deparse(substitute(pl)) |> str_remove("^fig_") |> str_remove("^.+\\$")
+  file <- file.path(prefix, str_glue("{nm}.pdf"))
+  print(file)
+  pdf(file, width = width, height = height)
+  plot(pl)
+  dev.off()
 }
 
 
