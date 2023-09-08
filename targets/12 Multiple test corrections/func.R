@@ -29,12 +29,12 @@ plot_fwer <- function(max_k = 30, alpha = 0.05) {
   )
 }
 
-generate_two_data <- function(seed = 110, N1 = 970, M1 = 20, N2 = 30, M2 = 40, n = 5, S = 5) {
+generate_two_data <- function(seed = 110, N1 = 970000, M1 = 20, N2 = 30000, M2 = 40, S = 5) {
   set.seed(110)
-  h0 <- rnorm(n * N1, M1, S)
-  h1 <- rnorm(n * N2, M2, S)
+  h0 <- rnorm(N1, M1, S)
+  h1 <- rnorm(N2, M2, S)
   tibble(
-    samp = rep(seq(1, N1 + N2), each = n),
+    samp = seq(1, N1 + N2),
     value = c(h0, h1),
     hypothesis = c(rep(0, length(h0)), rep(1, length(h1))) |> factor(levels = c(1, 0))
   )
@@ -60,15 +60,20 @@ read_two_p <- function(file) {
 }
 
 
-plot_two_dist <- function(td) {
-  brks <- seq(0, 60, 1)
-  ggplot(td, aes(x = value)) +
+plot_two_dist <- function() {
+  td <- tibble(
+    x = seq(0, 60, 0.1),
+    f_norm = dnorm(x, 20, 5),
+    f_fat = dnorm(x, 30, 5)
+  ) |> 
+    pivot_longer(-x)
+  ggplot(td, aes(x = x, y = value, colour = name)) +
     theme_dist +
-    geom_histogram(aes(fill = hypothesis), breaks = brks, position = "identity") +
-    scale_fill_manual(values = c(fill.colour.dark, fill.colour.mid)) +
-    labs(x = "Body mass (g)", y = "Frequency") +
+    geom_line(linewidth = 1.2) +
+    scale_colour_manual(values = c(fill.colour.dark, fill.colour.mid)) +
+    labs(x = "Body mass (g)") +
     theme(legend.position = "none") +
-    scale_y_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
     scale_x_continuous(expand = c(0,0))
 }
 

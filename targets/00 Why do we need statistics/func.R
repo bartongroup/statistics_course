@@ -216,7 +216,7 @@ plot_distance_matrix <- function(cnt, metadata, distance=c("correlation"), text.
   clr <- okabe_ito_palette[as_factor(metadata$condition)]
   ggplot(d, aes(x=sample1, y=sample2)) +
     theme_bw() +
-    geom_tile(aes_(fill=~value)) +
+    geom_tile(aes(fill = value)) +
     scale_fill_viridis_c(option="cividis") +
     theme(
       axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5, size=text.size, colour=clr),

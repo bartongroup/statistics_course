@@ -111,7 +111,7 @@ plot_anova_2 <- function(m, ylim=c(0,40), text.size=10, col_var="Country", row_v
   g1 <- ggplot(mice, aes(x=1, y=val)) +
     theme_classic() +
     facet_grid(row ~ col, switch="both") +
-    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", linewidth=0.3) +
     #geom_boxplot(aes(fill=Country), alpha=0.5, outlier.shape = NA, width=0.7) +
     scale_fill_manual(values=palette) +
     geom_beeswarm(aes(fill=col), cex=3, size=1.5, shape=21) +
@@ -135,7 +135,7 @@ plot_anova_2 <- function(m, ylim=c(0,40), text.size=10, col_var="Country", row_v
     geom_point(aes(fill=row), size=2, shape=22) +
     labs(x="", y="") +
     ylim(ylim) +
-    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", linewidth=0.3) +
     scale_colour_manual(values=c("grey60", "black")) +
     scale_fill_manual(values=c("white", "black")) +
     scale_x_discrete(position = "top") +
@@ -156,7 +156,7 @@ plot_anova_2 <- function(m, ylim=c(0,40), text.size=10, col_var="Country", row_v
     geom_point(aes(colour=col, fill=col), size=2, shape=22) +
     labs(x="", y="") +
     ylim(ylim) +
-    geom_hline(yintercept = grand.mean, linetype = "dotted", size=0.3) +
+    geom_hline(yintercept = grand.mean, linetype = "dotted", linewidth=0.3) +
     scale_colour_manual(values=palette) +
     scale_fill_manual(values=palette) +
     scale_x_discrete(position = "bottom") +

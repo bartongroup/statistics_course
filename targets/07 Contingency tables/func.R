@@ -21,7 +21,7 @@ plotPip <- function(x, title = "") {
     labs(x = "Plate", y = "Colony count", title = title) +
     scale_y_continuous(expand = c(0,0), limits = c(0, max(df$y * 1.05))) +
     xlim(0.5,5.5) +
-    geom_hline(yintercept = mean(df$y), colour = "red", linetype = "dashed", size = 0.3)
+    geom_hline(yintercept = mean(df$y), colour = "red", linetype = "dashed", linewidth = 0.3)
 }
 
 plot_pip_uni_nonuni <- function() {
@@ -41,7 +41,7 @@ plot_pipetting <- function(d) {
       axis.title.x = element_blank(),
       axis.text.x = element_blank()
     ) +
-    geom_hline(yintercept = mean(d$O), colour = "red", linetype = "dashed", size = 0.3) +
+    geom_hline(yintercept = mean(d$O), colour = "red", linetype = "dashed", linewidth = 0.3) +
     geom_errorbar(aes(ymin = lo, ymax = up), width = 0.2) +
     geom_point(shape = 21, size = 2, fill = "white") +
     scale_x_continuous(expand = c(0,0), limits = c(0.7, 5.3)) +
@@ -53,7 +53,7 @@ plot_pipetting <- function(d) {
     theme(
       plot.margin = margin(t = -2.5, l = 6, r = 5)
     ) +
-    geom_hline(yintercept = 0, colour = "red", linetype = "dashed", size = 0.3) +
+    geom_hline(yintercept = 0, colour = "red", linetype = "dashed", linewidth = 0.3) +
     geom_segment(aes(xend = plate, yend = 0), colour = "grey70") +
     geom_point(shape = 21, size = 2, fill = "white") +
     scale_x_continuous(expand = c(0,0), limits = c(0.7, 5.3)) +

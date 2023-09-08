@@ -160,7 +160,7 @@ plot_distribution_cut <- function(x, cut = NULL, locut = NULL, side = "upper", b
   maxh <- max(ggplot_build(dst)$data[[1]]$density)  # max density in histogram
   dst <- dst + scale_y_continuous(expand = c(0,0), limits = c(0, maxh*1.03))
   
-  gout <- geom_outline(x, brks, size = 0.3, colour = outline.colour)
+  gout <- geom_outline(x, brks, linewidth = 0.3, colour = outline.colour)
   
   if(!is.null(cut)) {
     cut <- brks[which.min(abs(brks - cut))]

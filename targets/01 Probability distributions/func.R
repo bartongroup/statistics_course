@@ -269,9 +269,9 @@ plot_r_dists <- function() {
     theme_classic() +
     theme_d +
     scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
-    geom_col(fill=fill.colour, colour="black", width=0.6, size=0.2) +
+    geom_col(fill=fill.colour, colour="black", width=0.6, linewidth=0.2) +
     labs(x=NULL, y=NULL) +
-    geom_col(data=d[7:9, ], fill=fill.colour.dark, colour="black", width=0.6, size=0.2)
+    geom_col(data=d[7:9, ], fill=fill.colour.dark, colour="black", width=0.6, linewidth=0.2)
 
   g4 <- plot_fun(dt, 4, x.grid=seq(-6, 6, 0.01), cut.up = qt(0.975, 4)) +
     theme_d

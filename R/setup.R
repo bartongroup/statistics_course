@@ -3,7 +3,7 @@ fill.colour.mid <- "lightgoldenrod3"
 fill.colour.dark <- "lightgoldenrod4"
 bar.outline <- "grey40"
 ef_palette <- c("lightgoldenrod3", "#009E73")
-okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#F0E442", "#0072B2", "#D55E00")
 
 british.palette <- c(
   English = rgb(255, 90, 90, maxColorValue = 255),

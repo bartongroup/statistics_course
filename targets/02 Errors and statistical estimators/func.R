@@ -17,7 +17,7 @@ plot_mini_normal <- function(n = 10000) {
     scale_y_continuous(expand = c(0,0)) +
     geom_histogram(breaks = brks, fill = fill.colour) +
     labs(x = "", y = "") +
-    geom_outline(d, brks, size = 0.3)
+    geom_outline(d, brks, linewidth = 0.3)
 }
 
 

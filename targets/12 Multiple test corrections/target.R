@@ -12,8 +12,6 @@ lecture_12 <- function() {
   )
   
   comp <- tar_plan(
-    two_data = generate_two_data(),
-    two_data_p_alt = two_data_tests(two_data),
     small_p_data = make_small_p_data(),
     large_p_data = make_large_p_data(two_data_p),
     
@@ -27,7 +25,7 @@ lecture_12 <- function() {
     s_fw_2 = gs(figs_fwer$fwer_bonferroni, path12, 3.5, 3),
     
     # test data
-    s_td2 = plot_two_dist(two_data) |> gs(path12, 3.5, 3, "test_data_dist"),
+    s_td2 = plot_two_dist() |> gs(path12, 4, 4, "test_data_dist"),
     s_tp2 = plot_two_dist_p(two_data_p) |> gs(path12, 3.5, 3, "test_data_dist_pvalue"),
     
     # HM = BH

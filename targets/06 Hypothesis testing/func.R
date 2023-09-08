@@ -33,7 +33,7 @@ plot_mouse_dist <- function(d) {
     scale_y_continuous(expand = c(0,0)) +
     geom_histogram(breaks = brks, fill = fill.colour) +
     labs(x = "Body mass difference (g)", y = "Normalized frequency") +
-    geom_outline(mouse, brks, size = 0.3)
+    geom_outline(mouse, brks, linewidth = 0.3)
 }
 
 
