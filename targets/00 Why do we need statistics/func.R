@@ -1,8 +1,8 @@
-plot_gene_cnt <- function(cnt, gene, sel=NULL, p.alpha=1) {
+plot_gene_cnt <- function(cnt, gene, sel = NULL, p.alpha = 1) {
   m <- cnt |> 
     filter(gene_id == gene) |> 
     pivot_longer(-gene_id, names_to="sample") |> 
-    separate(sample, c("condition", "replicate"), sep="_", remove=FALSE) |> 
+    separate_wider_delim(sample, names =  c("condition", "replicate"), delim = "_", cols_remove = FALSE) |> 
     mutate(condition = fct_relevel(condition, "WT"))
   lims <- c(min(m$value), max(m$value))
   
@@ -11,8 +11,8 @@ plot_gene_cnt <- function(cnt, gene, sel=NULL, p.alpha=1) {
   
   g <- ggplot() +
     theme_bw() +
+    theme(panel.grid = element_blank()) +
     scale_fill_manual(values=okabe_ito_palette, guide="none") +
-    geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
     labs(x=NULL, y="Read count") +
     scale_x_discrete(labels=c("WT", expression(Delta*Snf2))) +
     scale_y_continuous(limits = lims)
@@ -20,8 +20,12 @@ plot_gene_cnt <- function(cnt, gene, sel=NULL, p.alpha=1) {
     mm <- m |> group_by(condition) |> summarise(M=mean(value), SD=sd(value), n=n()) |> mutate(CI = SD/sqrt(n) * qt(0.975, n - 1))
     mm$i <- c(1.3, 1.7)
     g <- g +
+      geom_beeswarm(data=m, aes(x=condition, y=value, fill=condition), cex=3, size=1, shape=21, priority="density", alpha=p.alpha) +
       geom_errorbar(data=mm, aes(x=i, ymin=M-CI, ymax=M+CI), width=0.15) +
       geom_point(data=mm, aes(x=i, y=M, fill=condition), size=3, shape=22)
+  } else {
+    g <- g +
+      geom_point(data = m, aes(x = condition, y = value, fill = condition), size = 1, shape = 21, alpha = p.alpha)
   }
   g
 }
@@ -58,39 +62,18 @@ plot_body_temperature <- function(body) {
     y = dnorm(x, mean=M, sd=S)
   )
   
-  g1 <- ggplot(body, aes(x=temperature.c, y=1)) +
+  brks <- seq(35, 39, 0.2)
+  ggplot() +
     theme_bw() +
     theme(
-      axis.title.y = element_blank(),
-      axis.ticks.y = element_blank(),
-      axis.text.y = element_blank(),
-      plot.margin = margin(t=-2,r=6,l=3),
       panel.grid = element_blank()
     ) +
-    geom_beeswarm(groupOnX = FALSE, cex=1, size=0.8, shape=21, fill=fill.colour) +
-    scale_x_continuous(expand=c(0,0), limits=c(35, 39)) +
-    scale_y_continuous(expand=c(0.1,0)) +
-    labs(x=expression(Body~temperature~(degree*C)))
-  
-  brks <- seq(35,39,0.2)
-  g2 <- ggplot() +
-    theme_bw() +
-    theme(
-      axis.title.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.text.x = element_blank(),
-      plot.margin = margin(b=0,r=6,t=10,l=3),
-      panel.grid = element_blank()
-    ) +
-    geom_histogram(data=body, aes(x=temperature.c, y=after_stat(density)), breaks=brks, fill=fill.colour) +
+    geom_histogram(data = body, aes(x = temperature.c, y = after_stat(density)), breaks = brks, fill = fill.colour) +
     geom_outline(body$temperature.c, breaks=brks) +
     geom_line(data=m, aes(x,y), colour="brown3") +
     scale_y_continuous(expand=c(0,0), limits=c(0,1.2), breaks=seq(0.2,1.2,0.2)) +
     scale_x_continuous(expand=c(0,0), limits=c(35, 39)) +
-    labs(x=NULL, y="Density")
-  
-  
-  plot_grid(g2, g1, ncol=1, align="v", rel_heights = c(3,1))
+    labs(x = "Temperature (ºC)", y="Density")
 }
 
 
@@ -118,6 +101,7 @@ plot_tumour_lines <- function(ptpn) {
   
   g1 <- ggplot(ptpn, aes(x=day, y=volume, group=sample, colour=condition)) +
     theme_bw() +
+    theme(panel.grid = element_blank()) +
     geom_line() +
     labs(x="Day", y=expression(Tumor~volume~(mm^3)), title="Raw data") +
     scale_x_log10() +
@@ -127,6 +111,7 @@ plot_tumour_lines <- function(ptpn) {
   
   g2 <- ggplot(m) +
     theme_bw() +
+    theme(panel.grid = element_blank()) +
     geom_line(aes(x=day, y=M, colour=condition)) +
     geom_ribbon(aes(x=day, ymin=M-SE, ymax=M+SE, fill=condition), alpha=0.3) +
     scale_x_log10() +
@@ -139,6 +124,7 @@ plot_tumour_lines <- function(ptpn) {
   
   g3 <- ggplot(ptpn, aes(x=lday, y=lvolume, colour=condition)) +
     theme_bw() +
+    theme(panel.grid = element_blank()) +
     theme(
       legend.key = element_rect(fill="white", colour=NA),
       legend.text = element_text(size=8),
@@ -154,7 +140,7 @@ plot_tumour_lines <- function(ptpn) {
     guides(color=guide_legend(override.aes=list(fill=NA)))
   
   
-  g <- plot_grid(g1, g2, g3, nrow=1, rel_widths = c(1.05, 0.9, 1.3))
+  plot_grid(g1, g2, g3, nrow=1, rel_widths = c(1.05, 0.9, 1.3))
   
 }
 
@@ -240,7 +226,7 @@ plot_genes_cnt <- function(cnt, gene_ids, genes, cex=3, conditions=c("E12.5", "E
     left_join(genes, by="gene_id")
   ggplot(d, aes(x=condition, y=count, fill=condition)) +
     theme_bw() +
-    theme(legend.position = "none") +
+    theme(legend.position = "none", panel.grid = element_blank()) +
     facet_wrap(~gene_name) +
     geom_beeswarm(shape=21, cex=cex, size=1.8) +
     #scale_y_continuous() +

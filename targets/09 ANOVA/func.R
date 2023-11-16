@@ -256,9 +256,9 @@ simple_anova_plot <- function(dat, title="") {
   colnames(dat) <- c("Drug", "Placebo")
   rownames(dat) <- c("Male", "Female")
   dat |> 
-    as_tibble(rownames = "Gender") |> 
-    pivot_longer(-Gender, names_to = "Treatment", values_to = "Score") |> 
-  ggplot(aes(x=Gender, y=Score, group=Treatment)) +
+    as_tibble(rownames = "Sex") |> 
+    pivot_longer(-Sex, names_to = "Treatment", values_to = "Score") |> 
+  ggplot(aes(x=Sex, y=Score, group=Treatment)) +
     theme_clean +
     geom_line(aes(colour=Treatment)) +
     geom_point(aes(shape=Treatment, colour=Treatment)) +
@@ -273,7 +273,7 @@ plot_drug_anova <- function() {
   g1 <- simple_anova_plot(dat1, "Drug effect")
 
   dat2 <- rbind(c(15, 5), c(25, 15))
-  g2 <- simple_anova_plot(dat2, "Drug and gender effect")
+  g2 <- simple_anova_plot(dat2, "Drug and sex effect")
 
   dat3 <- rbind(c(25, 5), c(10, 5))
   g3 <- simple_anova_plot(dat3, "Interaction effect")

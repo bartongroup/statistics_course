@@ -50,8 +50,8 @@ lecture_13 <- function() {
     
     # R2
     figs_r2 = plot_r2_examples(),
-    s_r2_1 = gs(figs_r2$r2_large, path13, 4, 4),
-    s_r2_2 = gs(figs_r2$r2_small, path13, 4, 4),
+    s_r2_1 = gs(figs_r2$r2_large, path13, 6, 3),
+    s_r2_2 = gs(figs_r2$r2_small, path13, 6, 3),
     
     # Example
     s_sal = plot_salaries(salaries) |> gs(path13, 8, 5, "salaries"),

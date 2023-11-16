@@ -152,17 +152,35 @@ plot_r2 <- function(d) {
   mod <- lm(y ~ x, data = d)
   cf <- coef(mod)
   R2 <- summary(mod)$r.squared
+
+  dm <- d |>
+    mutate(pred = predict(mod, d), M = M)
+  d2 <- bind_rows(
+    dm |> 
+      mutate(
+        what = "Total variance",
+        yv = y
+      ),
+    dm |> 
+      mutate(
+        what = "Variance explained by the model",
+        yv = pred
+      )
+  )
   
-  d |>
-    mutate(pred = predict(mod, d)) |> 
-    ggplot(aes(x = x, y = y)) +
+  d2v <- d2 |> 
+    group_by(what) |> 
+    summarise(v = sum((yv - M)^2) |> signif(2))
+  
+  d2 |> ggplot() +
     theme_clean +
-    geom_segment(aes(xend = x, yend = pred), colour = "black") +
-    geom_segment(aes(xend = x, yend = M), colour = "orange", linetype = "dashed") +
-    geom_point() +
+    geom_point(aes(x = x, y = y)) +
     geom_abline(slope = cf[2], intercept = cf[1], colour = "red") +
     geom_hline(yintercept = M, colour = "orange", linetype = "dashed") +
-    labs(title = sprintf("R² = %4.2f", R2))
+    geom_segment(aes(x = x, xend = x, y = yv, yend = M), colour = "black") +
+    labs(title = sprintf("R² = %4.2f", R2)) +
+    facet_wrap(~ what) +
+    geom_text(data = d2v, aes(label = v), x = -Inf, y = Inf, hjust = -0.4, vjust = 1.4)
 }
 
 
@@ -170,16 +188,15 @@ plot_r2_examples <- function() {
   set.seed(61234)
   x <- 1:10
   d1 <- tibble(x = x, y = 1*x + rnorm(10, 5))
-  g1 <- plot_r2(d1)
-  g1
+  r2_large <- plot_r2(d1)
 
-  set.seed(4336)
+  set.seed(7238)
   d2 <- tibble(x = x, y = 0 + rnorm(10, 5))
-  g2 <- plot_r2(d2)
-  g2
-  
+  r2_small <- plot_r2(d2)
+  r2_small
+
   list(
-    r2_large = g1,
-    r2_small = g2
+    r2_large = r2_large,
+    r2_small = r2_small
   )
 }
