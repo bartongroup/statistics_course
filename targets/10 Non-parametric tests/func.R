@@ -202,13 +202,20 @@ plot_udist <- function(U, nx, ny, u.cut = 10, xmax = 45,  ymax = 0.12) {
     geom_line(data = gs, aes(x, y), colour = "red")
   g2
   
-  xc <- seq(0, u.cut, 0.1)
-  gc <- data.frame(
-    x = c(xc, u.cut, 0),
-    y = c(2*dnorm(xc, M, S), 0, 0)
+  ucut_2 <- M + (M - u.cut)
+  xc1 <- seq(0, u.cut, 0.1)
+  xc2 <- seq(ucut_2, xmax, 0.1)
+  gc1 <- data.frame(
+    x = c(xc1, u.cut, 0),
+    y = c(2*dnorm(xc1, M, S), 0, 0)
+  )
+  gc2 <- data.frame(
+    x = c(ucut_2, xc2, xmax),
+    y = c(0, 2*dnorm(xc2, M, S), 0)
   )
   g3 <- g2 +
-    geom_polygon(data = gc, aes(x, y), colour = "red", fill = fill.colour.dark)
+    geom_polygon(data = gc1, aes(x, y), colour = "red", fill = fill.colour.dark) +
+    geom_polygon(data = gc2, aes(x, y), colour = "red", fill = fill.colour.dark)
   g3
   
   list(udist = g1, udist_norm = g2, udist_cut = g3)
@@ -307,7 +314,7 @@ plot_apgar_scores <- function(d) {
     theme(
       legend.position = "none"
     ) +
-    geom_beeswarm(cex = 0.6, size = 2, shape = 21) +
+    geom_beeswarm(cex = 4, size = 2, shape = 21) +
     scale_fill_manual(values = okabe_ito_palette) +
     scale_y_continuous(breaks = 0:10, limits = c(0,10.5), expand = c(0,0)) +
     labs(x = NULL, y = "Score")
@@ -504,7 +511,7 @@ plot_rank <- function(mice) {
 reduce_mice <- function(mice4) {
   mice4 |> 
     filter(Country %in% c("English", "Scottish")) |> 
-    mutate(Rank = rank(Lifespan, ties.method = "random"))
+    mutate(Rank = rank(Lifespan, ties.method = "average"))
 }
 
 plot_value_rank <- function(mice4) {

@@ -77,7 +77,7 @@ lecture_10 <- function() {
     # Kruskal
     s_vr = plot_value_rank(mice_lifespan4) |> gs(path10, 3.3, 3.5, "value_rank"),
     s_ak = plot_anova_kruskal(mice_lifespan4) |> gs(path10, 6, 3.5, "anova_kruskal"),
-    s_m2r = plot_rank(reduce_mice(mice_lifespan4)) |> gs(path10, 3, 0.7, "mice2_rank"),
+    s_m2r = (plot_rank(reduce_mice(mice_lifespan4)) + scale_y_continuous(expand = c(0,0.5))) |> gs(path10, 3, 0.8, "mice2_rank"),
     s_m4r = (plot_rank(mice_lifespan4) + scale_y_continuous(expand = c(0,0.6))) |> gs(path10, 5, 0.95, "mice4_rank"),
     
     # Kruskal variance
